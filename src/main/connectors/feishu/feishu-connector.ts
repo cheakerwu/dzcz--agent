@@ -551,10 +551,10 @@ export class FeishuConnector implements Connector {
           const store = SystemConfigStore.getInstance();
           const record = store.getPairingRecordByUser('feishu', feishuMessage.sender.id);
           if (record?.approved) {
-            feishuMessage.systemContext = `[系统通知] 这是第一次有用户连接到 Local Agent Terminal。该用户已被自动设置为管理员。请在回复中告知用户：
+            feishuMessage.systemContext = `[系统通知] 这是第一次有用户连接到点之出众餐饮智能工作台。该用户已被自动设置为管理员。请在回复中告知用户：
 1. 他已被自动设置为管理员
 2. 作为管理员，他可以通过发送 "deepbot pairing approve feishu <配对码>" 来批准其他用户的配对请求
-3. 也可以在 Local Agent Terminal 桌面端的"系统管理 → 飞书 → Pairing 管理"界面中管理用户权限`;
+3. 也可以在点之出众餐饮智能工作台桌面端的"系统管理 → 飞书 → Pairing 管理"界面中管理用户权限`;
             await this.connectorManager.handleIncomingMessage('feishu', feishuMessage);
             return;
           }
@@ -811,7 +811,7 @@ export class FeishuConnector implements Connector {
     const receiveIdType = openId ? 'open_id' : 'chat_id';
     this.outbound.sendMessage({
       conversationId: target,
-      content: '✅ 授权完成，你可以开始和 Local Agent Terminal 对话了。\n\n发送「你能做什么」获取使用帮助。',
+      content: '✅ 授权完成，你可以开始和「点之出众餐饮智能工作台」对话了。\n\n发送「你能做什么」获取使用帮助。',
       _receiveIdType: receiveIdType,
     }).catch(() => {});
   }

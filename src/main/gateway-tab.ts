@@ -307,44 +307,35 @@ export class GatewayTabManager {
     const isEn = SystemConfigStore.getInstance().getAppSetting('language') === 'en';
     
     if (isEn) {
-      return `👋 Hi! Welcome to Local Agent Terminal!
+      return `👋 Hi! Welcome to DianBot Smart Restaurant Workstation!
 
-I'm your all-in-one AI assistant, available 24/7 to help with all kinds of tasks. Before we start, let's get to know each other!
+I'm your restaurant operations AI assistant, available 24/7 to help manage your business. Before we start, let's get to know each other!
 
 ---
 
 About me:
 
 - I don't have a name yet — give me one? (Just say "Your name is XXX")${!isDefaultAgentName ? ` Current name: ${agentName}` : ''}
-- Who am I? Your all-in-one AI assistant, ready to help anytime
+- Who am I? Your restaurant operations AI assistant, ready to help anytime
 - Conversation style? Formal / casual / professional / warm — your call
-- Memory system: Say "Remember XXX" anytime and I'll permanently remember your preferences, habits, project info, etc.
-- Role setting: You can assign me a professional role, e.g. "Python expert", "DevOps engineer", "Data analyst", etc. I'll work in that domain and you can install matching Skills
+- Memory system: Say "Remember XXX" and I'll permanently remember store info, menu data, supplier contacts, etc.
+- Role setting: Assign me a role like "Takeout Operations Expert", "Store Inspector", "Marketing Planner"
 
 About you:
 
 - What should I call you? (I'll remember permanently)${!isDefaultUserName ? ` Current name: ${userName}` : ''}
-- What projects/work do you do? (I can remember your common tools)
-- Any preferences or pet peeves? (e.g. code style, work habits)
+- What restaurants/stores do you manage?
+- Any operational preferences or habits?
 
 What I can do:
 
-- 📁 File operations: read, write, search, organize files
-- 🌐 Browse the web: automate web pages, extract info
-- ⚙️ Run commands: execute scripts, manage processes
-- 📋 Task management: create, track, remind
-- ⏰ Scheduled tasks: set up background automation
-- 🧠 Memory system: remember your preferences, tools, project info
-- 🔧 Skill extensions: install skill packages to expand my abilities
-
-Extensions:
-
-- 🔧 Install Skills: Say "search XXX skill" or "install XXX skill"
-- 🐍 Python tools: I can install and use Python tools for complex tasks
-
-More info:
-
-- 💡 Click [⚙️ Config] in the top right to see the "Quick Start" guide
+- 📊 Data collection: Auto-collect Meituan/Ele.me business data, ratings, reviews
+- 📈 Business analysis: Daily/weekly/monthly reports, trend analysis
+- ⭐ Review management: Monitor negative reviews, draft reply templates
+- 🏪 Store inspection: Check store pages for completeness via browser automation
+- 📋 Operations reports: Auto-generate daily/weekly reports, send to Feishu/WeCom groups
+- ⏰ Scheduled tasks: Set up daily data collection, timed reports
+- 🔧 Marketing support: Campaign ideas, competitor analysis, pricing reference
 
 Commands:
 
@@ -357,45 +348,40 @@ Commands:
 - /status — View current task status
 - /reload-path — Reload PATH environment variables
 
-As we interact, I'll get to know you better and improve at completing tasks. 😊
+As we interact, I'll learn more about your stores and operations. 😊
 
-Feel free to ask anything or tell me what you need!`;
+Feel free to ask anything about your restaurant operations!`;
     }
 
-    return `👋 你好！欢迎第一次使用 Local Agent Terminal！
+    return `👋 你好！欢迎使用「点之出众餐饮智能工作台」！
 
-我是你的全能 AI 助手，24 小时待命帮你处理各种任务。在开始之前，让我们先互相认识一下吧！
+我是你的餐饮运营 AI 助手，24 小时待命帮你处理门店运营事务。在开始之前，让我们先互相认识一下吧！
 
 ---
 
 关于我：
 
 - 我还没有名字，你帮我取一个？（说"你叫 XXX"即可）${!isDefaultAgentName ? ` 当前名字：${agentName}` : ''}
-- 我是谁？全能 AI 助手，24 小时待命帮你干活
+- 我是谁？点之出众餐饮智能工作台的 AI 运营助手，专注餐饮行业
 - 对话风格？你希望我正式/随意/专业/温暖？
-- 记忆系统：你可以随时说"记住 XXX"，我会永久记住你的偏好、习惯、项目信息等
-- 角色设定：你可以给我设定专业角色，比如"Python 开发专家"、"运维工程师"、"数据分析师"等，设定后我会按照这个专业领域来帮你，还可以安装对应的 Skill 扩展能力
+- 记忆系统：你可以随时说"记住 XXX"，我会永久记住门店信息、菜品数据、供应商信息等
+- 角色设定：你可以给我设定专业角色，比如"外卖运营专家"、"门店巡检员"、"营销策划师"等
 
 关于你：
 
 - 怎么称呼你？（我会永久记住）${!isDefaultUserName ? ` 当前称呼：${userName}` : ''}
-- 你主要做什么项目/工作？（我可以记住常用工具和命令）
-- 有什么特别在意或讨厌的？（比如代码风格、工作习惯）
+- 你管理哪些门店？（我可以记住门店信息）
+- 有什么运营习惯或偏好？
 
 我能帮你做什么：
 
-- 📁 文件操作：读写、搜索、整理文件
-- 🌐 浏览网页：自动化网页操作、信息提取
-- ⚙️ 执行命令：运行脚本、管理进程
-- 📋 任务管理：创建、跟踪、提醒任务
-- ⏰ 定时任务：设置后台自动执行的任务
-- 🧠 记忆系统：记住你的偏好、常用工具、项目信息
-- 🔧 Skill 扩展：安装专业技能包，扩展我的能力
-
-扩展能力：
-
-- 🔧 安装 Skill：通过说"搜索 XXX skill"或"安装 XXX skill"来扩展专业能力
-- 🐍 Python 工具：我可以帮你安装和使用 Python 工具来处理更复杂的任务
+- 📊 数据采集：自动采集美团/饿了么等平台的营业数据、评分、评价
+- 📈 经营分析：分析每日/每周/每月经营数据，发现异常和趋势
+- ⭐ 评价管理：监控差评预警，协助撰写回复话术
+- 🏪 门店巡检：通过浏览器自动化检查门店页面信息是否完整准确
+- 📋 运营报告：自动生成日报/周报，发送到飞书/企微群
+- ⏰ 定时任务：设置每日营业数据采集、定时发送报告等
+- 🔧 营销支持：活动策划建议、竞品分析、菜品定价参考
 
 更多使用说明：
 
@@ -412,9 +398,9 @@ Feel free to ask anything or tell me what you need!`;
 - /status — 查看当前任务执行状态
 - /reload-path — 刷新环境变量（安装新工具后使用）
 
-在我们的沟通过程中，我会越来越了解你，知道怎么更好的完成任务。😊
+在我们的沟通过程中，我会越来越了解你的门店和运营情况，提供更精准的帮助。😊
 
-有什么问题或者需要帮忙的，尽管说！`;
+有什么运营问题或者需要帮忙的，尽管说！`;
   }
   
   /**
