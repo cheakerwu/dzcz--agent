@@ -1,0 +1,64 @@
+services:
+  deepbot:
+    image: deepbot:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # 多架构构建：linux/amd64（x64）和 linux/arm64（Apple Silicon / ARM 服务器）
+      # 使用 buildx 时启用：docker buildx build --platform linux/amd64,linux/arm64 -t deepbot:latest .
+      # platforms:
+      #   - linux/amd64
+      #   - linux/arm64
+
+    ports:
+      - "${PORT:-3008}:${PORT:-3008}"
+
+    environment:
+      # Docker 模式标识（固定，不要修改）
+      - DEEPBOT_DOCKER=true
+      # Playwright Chromium 路径（容器内固定路径）
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+    env_file:
+      # 从 .env 文件加载用户配置（API Key、密码、端口等）
+      # 复制 .env.example 为 .env 并填写
+      - .env
+
+    volumes:
+      # 数据持久化：容器路径 → 宿主机路径（由 .env 配置，默认值见下方）
+      # 修改 .env 后需要 docker-compose down && docker-compose up -d 重建容器
+      # ⚠️ 部署时必须在 .env 中设置路径变量（使用绝对路径），~ 在部分环境下无法正确展开
+
+      # 工作目录（AI 文件操作的根目录）
+      - ${WORKSPACE_DIR:-~}:/data/workspace
+
+      # Skill 安装目录
+      - ${SKILLS_DIR:-~/.agents/skills}:/data/skills
+
+      # 记忆文件目录
+      - ${MEMORY_DIR:-~/.deepbot/memory}:/data/memory
+
+      # 对话历史目录
+      - ${SESSIONS_DIR:-~/.deepbot/sessions}:/data/sessions
+
+      # 脚本目录（AI 生成的脚本文件）
+      - ${SCRIPTS_DIR:-~/.deepbot/scripts}:/data/scripts
+
+      # 图片生成目录（AI 生成的图片文件）
+      - ${IMAGES_DIR:-~/.deepbot/generated-images}:/data/images
+
+      # 数据库目录（SQLite 文件）
+      - ${DB_DIR:-~/.deepbot}:/data/db
+
+      # Playwright Chromium 浏览器（持久化，避免重复下载）
+      - ${PLAYWRIGHT_CACHE_DIR:-~/.deepbot/playwright}:/ms-playwright
+
+    restart: unless-stopped
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get(`http://localhost:$${process.env.PORT||3008}/health`, r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

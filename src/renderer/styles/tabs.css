@@ -1,0 +1,359 @@
+/**
+ * Agent Tabs 样式 - 使用终端主题变量
+ */
+
+.agent-tabs-wrapper {
+  background: var(--terminal-header-bg);
+  border-bottom: 1px solid var(--terminal-border);
+  padding: 0;
+  height: 36px;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  z-index: 3;
+}
+
+.agent-tabs-container {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+}
+
+.agent-tabs-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.agent-tabs-container::-webkit-scrollbar-thumb {
+  background: var(--terminal-border);
+  border-radius: 2px;
+}
+
+.agent-tabs-container::-webkit-scrollbar-thumb:hover {
+  background: var(--terminal-text-dim);
+}
+
+.agent-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  height: 36px;
+  background: var(--terminal-header-bg);
+  border-right: 1px solid var(--terminal-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+  color: var(--terminal-text-dim);
+  font-size: 13px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+}
+
+.agent-tab:hover {
+  background: var(--terminal-accent-bg-hover);
+  color: var(--terminal-text);
+}
+
+.agent-tab.drag-over {
+  border-left: 2px solid var(--terminal-prompt-user);
+}
+
+.agent-tab.active {
+  background: var(--terminal-bg);
+  color: var(--terminal-prompt-user);
+  border-bottom: 2px solid var(--terminal-prompt-user);
+}
+
+/* Fast 模式 Tab */
+.agent-tab.fast-mode {
+  border-bottom: 2px solid #f59e0b;
+}
+
+.agent-tab.fast-mode.active {
+  color: #f59e0b;
+  border-bottom: 2px solid #f59e0b;
+}
+
+/* 锁定状态的 Tab（定时任务专属） */
+.agent-tab.locked {
+  background: var(--terminal-header-bg);
+  border-right: 1px solid var(--terminal-border);
+  color: var(--terminal-prompt-agent);
+}
+
+.agent-tab.locked:hover {
+  background: var(--terminal-accent-bg-hover);
+  color: var(--terminal-prompt-agent);
+}
+
+.agent-tab.locked.active {
+  background: var(--terminal-bg);
+  color: var(--terminal-prompt-agent);
+  border-bottom: 2px solid var(--terminal-prompt-agent);
+}
+
+.agent-tab.locked.active::before {
+  content: '🔒';
+  margin-right: 4px;
+  color: var(--terminal-prompt-agent);
+  font-weight: normal;
+}
+
+.agent-tab.locked .agent-tab-close {
+  color: var(--terminal-prompt-agent);
+}
+
+.agent-tab.locked .agent-tab-close:hover {
+  color: var(--terminal-error);
+  background: var(--terminal-accent-bg-hover);
+}
+
+.agent-tab-title {
+  font-size: 13px;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.agent-tab-close {
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: var(--terminal-text-dim);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.agent-tab:hover .agent-tab-close {
+  opacity: 1;
+}
+
+.agent-tab-close:hover {
+  color: var(--terminal-error);
+  background: var(--terminal-accent-bg-hover);
+}
+
+.agent-tab-close:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.agent-tab-close:disabled:hover {
+  color: var(--terminal-text-dim);
+  background: transparent;
+}
+
+.agent-tab-create {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--terminal-text-dim);
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  border-right: 1px solid var(--terminal-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agent-tab-create:hover {
+  background: var(--terminal-accent-bg-hover);
+  color: var(--terminal-prompt-user);
+}
+
+.agent-tab-create:active {
+  background: var(--terminal-bg);
+}
+
+.agent-tab-create:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.agent-tab-create:disabled:hover {
+  background: transparent;
+  color: var(--terminal-text-dim);
+}
+
+/* ========== 智能客服分组 Tab ========== */
+
+.agent-tab-group {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+/* 分组内的 Tab 主体 */
+.agent-tab-group .agent-tab {
+  padding-right: 8px;
+}
+
+/* 分组数量按钮 */
+.agent-tab-group-toggle {
+  min-width: 18px;
+  height: 18px;
+  border: none;
+  background: var(--terminal-text-dim);
+  color: var(--terminal-header-bg);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  border-radius: 9px;
+  margin-left: 4px;
+  padding: 0 5px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  opacity: 0.7;
+}
+
+.agent-tab-group-toggle:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* 有未读消息时数字按钮变红 */
+.agent-tab-group-toggle.has-unread {
+  background: var(--terminal-error);
+  color: #fff;
+  opacity: 1;
+}
+
+.agent-tab-group.active .agent-tab-group-toggle.has-unread {
+  background: var(--terminal-error);
+  color: #fff;
+  opacity: 1;
+}
+
+.agent-tab-group.active .agent-tab-group-toggle {
+  background: var(--terminal-prompt-user);
+  color: var(--terminal-bg);
+  opacity: 0.85;
+}
+
+.agent-tab-group.active .agent-tab-group-toggle:hover {
+  opacity: 1;
+}
+
+/* 分组下拉列表 - 使用 fixed 定位避免被父容器 overflow 裁剪 */
+.agent-tab-group-dropdown {
+  position: fixed;
+  min-width: 200px;
+  max-width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: var(--terminal-header-bg);
+  border: 1px solid var(--terminal-border);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.agent-tab-group-dropdown::-webkit-scrollbar {
+  width: 4px;
+}
+
+.agent-tab-group-dropdown::-webkit-scrollbar-thumb {
+  background: var(--terminal-border);
+  border-radius: 2px;
+}
+
+/* 下拉列表中的每个 Tab 项 */
+.agent-tab-group-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--terminal-text-dim);
+  font-size: 13px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+  border-bottom: 1px solid var(--terminal-border);
+}
+
+.agent-tab-group-item:last-child {
+  border-bottom: none;
+}
+
+.agent-tab-group-item:hover {
+  background: var(--terminal-accent-bg-hover);
+  color: var(--terminal-text);
+}
+
+.agent-tab-group-item.active {
+  color: var(--terminal-prompt-user);
+  background: var(--terminal-bg);
+}
+
+.agent-tab-group-item-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+/* 下拉列表中的未读气泡 */
+.agent-tab-group-item-badge {
+  background: var(--terminal-error);
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 8px;
+  min-width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* 下拉列表中的关闭按钮 */
+.agent-tab-group-item-close {
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: transparent;
+  color: var(--terminal-text-dim);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.agent-tab-group-item:hover .agent-tab-group-item-close {
+  opacity: 1;
+}
+
+.agent-tab-group-item-close:hover {
+  color: var(--terminal-error);
+  background: var(--terminal-accent-bg-hover);
+}

@@ -1,0 +1,107 @@
+/**
+ * 配置管理
+ */
+
+import { SystemConfigStore } from './database/system-config-store';
+
+export interface DeepBotConfig {
+  // API Key
+  apiKey: string;
+  
+  // Base URL（OpenAI 兼容端点或原生 API 端点）
+  baseUrl: string;
+  
+  // 模型 ID（主模型）
+  modelId: string;
+  
+  // 模型名称（用于显示）
+  modelName: string;
+  
+  // 提供商名称（用于 pi-agent-core）
+  providerName: string;
+  
+  // API 类型（用于 pi-ai）
+  apiType: string;
+  
+  // 模型 ID 2（快速模型，选填）
+  modelId2?: string;
+}
+
+/**
+ * 获取配置
+ * 
+ * 优先级：
+ * 1. 数据库配置
+ * 2. 环境变量
+ * 3. 抛出错误（需要用户配置）
+ */
+export function getConfig(): DeepBotConfig {
+  // 尝试从数据库读取配置
+  try {
+    const store = SystemConfigStore.getInstance();
+    const modelConfig = store.getModelConfig();
+    
+    if (modelConfig && modelConfig.apiKey && modelConfig.baseUrl && modelConfig.modelId) {
+      return {
+        apiKey: modelConfig.apiKey,
+        baseUrl: modelConfig.baseUrl,
+        modelId: modelConfig.modelId,
+        modelName: modelConfig.modelId, // 使用 modelId 作为显示名称
+        providerName: modelConfig.providerId,
+        apiType: modelConfig.apiType || 'openai-completions', // 默认 OpenAI 兼容
+        modelId2: modelConfig.modelId2, // 快速模型（选填）
+      };
+    }
+  } catch (error) {
+    console.warn('[Config] ❌ 从数据库读取配置失败:', error);
+  }
+  
+  // 从环境变量读取配置
+  const apiKey = process.env.AI_API_KEY || '';
+  const baseUrl = process.env.AI_BASE_URL || '';
+  const modelId = process.env.AI_MODEL_ID || '';
+  const modelName = process.env.AI_MODEL_NAME || '';
+  const providerName = process.env.AI_PROVIDER_NAME || '';
+  const apiType = process.env.AI_API_TYPE || 'openai-completions'; // 默认 OpenAI 兼容
+  const modelId2 = process.env.AI_MODEL_ID_2 || ''; // 快速模型（选填）
+  
+  // 如果没有配置，抛出错误
+  if (!apiKey || !baseUrl || !modelId) {
+    console.error('[Config] ❌ 模型未配置');
+    throw new Error('模型未配置，请在系统设置中配置 AI 模型');
+  }
+  
+  return {
+    apiKey,
+    baseUrl,
+    modelId,
+    modelName,
+    providerName,
+    apiType,
+    modelId2: modelId2 || undefined,
+  };
+}
+
+/**
+ * 检查配置是否存在
+ */
+export function hasConfig(): boolean {
+  try {
+    // 检查数据库配置
+    const store = SystemConfigStore.getInstance();
+    const modelConfig = store.getModelConfig();
+    
+    if (modelConfig && modelConfig.apiKey) {
+      return true;
+    }
+  } catch (error) {
+    console.warn('[Config] 检查数据库配置失败:', error);
+  }
+  
+  // 检查环境变量
+  const apiKey = process.env.AI_API_KEY || '';
+  const baseUrl = process.env.AI_BASE_URL || '';
+  const modelId = process.env.AI_MODEL_ID || '';
+  
+  return !!(apiKey && baseUrl && modelId);
+}

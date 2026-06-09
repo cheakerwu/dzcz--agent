@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build output
+dist/
+build/
+out/
+
+# Electron
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temp
+tmp/
+temp/
+outputs/
+agent-browser-main/
+/dist-electron
+/release
+
+# Kiro and migration notes
+.kiro/
+.migration-notes/
+/node.exe
+/DeveloperIDG2CA.cer
+/dist-web
+/dist-server
+*.gz
+/scripts/package-releases.sh
+/docs/deepbot-as-harness-engineering.md

@@ -1,0 +1,383 @@
+/**
+ * 环境配置页面
+ * 
+ * 功能：
+ * 1. 显示环境状态（Python、Node.js）
+ * 2. 提供一键检查按钮（发送提示词到 Main Agent）
+ * 3. 从数据库读取状态并显示
+ */
+
+import React, { useState, useEffect, useContext } from 'react';
+import { api } from '../../api';
+import { ThemeContext } from '../../App';
+import type { ThemeMode } from '../../hooks/useTheme';
+import { getLanguage } from '../../i18n';
+import { ScanSearch } from 'lucide-react';
+
+interface EnvironmentStatus {
+  python: {
+    isInstalled: boolean;
+    version?: string;
+    path?: string;
+    error?: string;
+  } | null;
+  allInstalled: boolean;
+  needsCheck: boolean;
+}
+
+interface EnvironmentConfigProps {
+  onClose?: () => void;
+  activeTabId?: string; // 当前选中的 Tab ID
+}
+
+export function EnvironmentConfig({ onClose, activeTabId }: EnvironmentConfigProps) {
+  const lang = getLanguage();
+  const { mode: themeMode, setThemeMode } = useContext(ThemeContext);
+  const [status, setStatus] = useState<EnvironmentStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = React.useRef(false);
+  const [fontSize, setFontSize] = useState<string>(() => {
+    return localStorage.getItem('deepbot-font-size') || 'small';
+  });
+  // 切换字体大小
+  const handleFontSizeChange = (size: string) => {
+    setFontSize(size);
+    localStorage.setItem('deepbot-font-size', size);
+    document.documentElement.setAttribute('data-font-size', size);
+  };
+
+  // 加载环境状态
+  const loadStatus = async () => {
+    try {
+      const result = await api.checkEnvironment('get_status');
+      if (result.success) {
+        setStatus(result.data);
+      } else {
+        setError(result.error || (lang === 'zh' ? '获取状态失败' : 'Failed to get status'));
+      }
+    } catch (err: any) {
+      console.error('加载环境状态失败:', err);
+      setError(err.message || (lang === 'zh' ? '加载失败' : 'Load failed'));
+    }
+  };
+
+  // 组件挂载时加载状态（防止 Strict Mode 重复执行）
+  useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+    
+    loadStatus();
+  }, []);
+
+  // 执行环境检查（通过 Main Agent）
+  const handleCheckEnvironment = () => {
+    // 发送提示词到 Main Agent（不等待完成）
+    const prompt = `请检查系统环境依赖，使用 environment_check 工具执行检查操作（action: check）。检查完成后，请告诉我结果。`;
+    const displayContent = '检查系统环境依赖';
+    
+    // 🔥 使用当前选中的 Tab ID，如果没有则使用默认 Tab
+    const sessionId = activeTabId || 'default';
+    
+    api.sendMessage(prompt, sessionId, displayContent).catch((err) => {
+      console.error('发送消息失败:', err);
+    });
+
+    // 立即关闭窗口，让用户在聊天窗口看到 Agent 执行过程
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  // 渲染环境项
+  const renderEnvironmentItem = (
+    name: string,
+    displayName: string,
+    config: { isInstalled: boolean; version?: string; path?: string; error?: string } | null
+  ) => {
+    if (!config) {
+      return (
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                <span className="text-gray-400 text-xl">?</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-900">{displayName}</h3>
+                <p className="text-xs text-gray-500">{lang === 'zh' ? '未检查' : 'Not checked'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`rounded-lg p-4 ${config.isInstalled ? 'bg-green-50' : 'bg-red-50'}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              config.isInstalled ? 'bg-green-100' : 'bg-red-100'
+            }`}>
+              {config.isInstalled ? (
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">{displayName}</h3>
+              {config.isInstalled ? (
+                <>
+                  <p className="text-xs text-gray-600 mt-1">{lang === 'zh' ? '版本' : 'Version'}: {config.version}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{lang === 'zh' ? '路径' : 'Path'}: {config.path}</p>
+                </>
+              ) : (
+                <p className="text-xs text-red-600 mt-1">{lang === 'zh' ? '未安装' : 'Not installed'} - {config.error}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 标题和说明 */}
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">{lang === 'zh' ? '环境配置' : 'Environment'}</h3>
+        <p className="text-sm text-gray-500">
+          {lang === 'zh' ? '配置界面主题和运行环境。' : 'Configure UI theme and runtime environment.'}
+        </p>
+      </div>
+
+      {/* 界面主题 */}
+      <div style={{
+        padding: '12px 16px',
+        border: '1px solid var(--settings-border)',
+        borderRadius: '8px',
+      }}>
+        <div style={{ fontSize: '13px', color: 'var(--settings-text)', fontWeight: '600', marginBottom: '8px' }}>
+          {lang === 'zh' ? '界面主题' : 'Theme'}
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {([
+            { value: 'light' as ThemeMode, label: lang === 'zh' ? '浅色' : 'Light', icon: (
+              <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+                <circle cx="16" cy="16" r="5" stroke="currentColor" strokeWidth="2"/>
+                <path d="M16 4v3M16 25v3M4 16h3M25 16h3M7.8 7.8l2.1 2.1M22.1 22.1l2.1 2.1M7.8 24.2l2.1-2.1M22.1 9.9l2.1-2.1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            )},
+            { value: 'dark' as ThemeMode, label: lang === 'zh' ? '深色' : 'Dark', icon: (
+              <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+                <path d="M26 17.6A10 10 0 1114.4 6a8 8 0 0011.6 11.6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )},
+            { value: 'auto' as ThemeMode, label: lang === 'zh' ? '自动' : 'Auto', icon: (
+              <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+                <circle cx="16" cy="16" r="10" stroke="currentColor" strokeWidth="2"/>
+                <path d="M16 6v20" stroke="currentColor" strokeWidth="2"/>
+                <path d="M16 6a10 10 0 010 20" fill="currentColor" opacity="0.15"/>
+              </svg>
+            )},
+          ]).map(opt => (
+            <div
+              key={opt.value}
+              onClick={() => setThemeMode(opt.value)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                border: themeMode === opt.value ? '2px solid var(--settings-accent)' : '2px solid transparent',
+                background: themeMode === opt.value ? 'var(--terminal-accent-bg)' : 'transparent',
+                color: themeMode === opt.value ? 'var(--settings-accent)' : 'var(--settings-text-dim)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {opt.icon}
+              <span style={{ fontSize: '11px', fontWeight: themeMode === opt.value ? '600' : '400' }}>
+                {opt.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 字体大小 */}
+      <div style={{
+        padding: '12px 16px',
+        border: '1px solid var(--settings-border)',
+        borderRadius: '8px',
+        marginBottom: '16px',
+      }}>
+        <div style={{ fontSize: '13px', color: 'var(--settings-text)', fontWeight: '600', marginBottom: '8px' }}>
+          {lang === 'zh' ? '字体大小' : 'Font Size'}
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {([
+            { value: 'small', label: lang === 'zh' ? '标准' : 'Standard' },
+            { value: 'medium', label: lang === 'zh' ? '中等' : 'Medium' },
+            { value: 'large', label: lang === 'zh' ? '较大' : 'Large' },
+          ]).map(opt => (
+            <div
+              key={opt.value}
+              onClick={() => handleFontSizeChange(opt.value)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                border: fontSize === opt.value ? '2px solid var(--settings-accent)' : '2px solid transparent',
+                background: fontSize === opt.value ? 'var(--terminal-accent-bg)' : 'transparent',
+                color: fontSize === opt.value ? 'var(--settings-accent)' : 'var(--settings-text-dim)',
+                transition: 'all 0.15s ease',
+                minWidth: '60px',
+              }}
+            >
+              <span style={{ fontSize: opt.value === 'small' ? '13px' : opt.value === 'medium' ? '14px' : '15px', fontFamily: 'Courier New, Consolas, monospace' }}>Aa</span>
+              <span style={{ fontSize: '11px', fontWeight: fontSize === opt.value ? '600' : '400', marginTop: '2px' }}>
+                {opt.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 运行环境 */}
+      <div style={{
+        padding: '16px',
+        border: '1px solid var(--settings-border)',
+        borderRadius: '8px',
+      }}>
+        <div style={{ fontSize: '13px', color: 'var(--settings-text)', fontWeight: '600', marginBottom: '4px' }}>
+          {lang === 'zh' ? '运行环境' : 'Runtime Environment'}
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--settings-text-dim)', marginBottom: '12px' }}>
+          {lang === 'zh' ? 'Local Agent Terminal 需要 Python 环境来执行脚本和 Skill。' : 'Local Agent Terminal requires Python to run scripts and Skills.'}
+        </p>
+
+        <div className="space-y-3">
+
+      {/* 错误提示 */}
+      {error && (
+        <div className="settings-alert settings-alert-error">
+          <div className="flex items-start space-x-3">
+            <svg className="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h4 className="text-sm font-medium text-red-900">{lang === 'zh' ? '错误' : 'Error'}</h4>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 环境状态 */}
+      {status && !status.needsCheck && (
+        <div className="space-y-3">
+          {renderEnvironmentItem('python', 'Python', status.python)}
+        </div>
+      )}
+
+      {/* 未检查状态 */}
+      {status && status.needsCheck && (
+        <div className="settings-alert settings-alert-warning">
+          <div className="flex items-start space-x-3">
+            <svg className="w-5 h-5 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h4 className="text-sm font-medium text-yellow-900">{lang === 'zh' ? '尚未检查环境' : 'Environment not checked'}</h4>
+              <p className="text-sm text-yellow-700 mt-1">
+                {lang === 'zh' ? '请点击下方按钮检查系统环境配置' : 'Click the button below to check system environment'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 检查按钮 */}
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={handleCheckEnvironment}
+          className="skill-icon-button skill-icon-button-accent"
+          style={{ padding: '4px 12px', gap: '4px', display: 'inline-flex', alignItems: 'center', fontSize: '12px' }}
+        >
+          <ScanSearch size={14} />
+          <span>{lang === 'zh' ? '检查环境' : 'Check Environment'}</span>
+        </button>
+      </div>
+
+      {/* 总体状态 */}
+      {status && !status.needsCheck && (
+        <div className={`settings-alert ${
+          status.allInstalled ? 'settings-alert-success' : 'settings-alert-warning'
+        }`}>
+          <div className="flex items-start space-x-3">
+            {status.allInstalled ? (
+              <svg className="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            )}
+            <div>
+              <h4 className={`text-sm font-medium ${
+                status.allInstalled ? 'text-green-900' : 'text-yellow-900'
+              }`}>
+                {status.allInstalled
+                  ? (lang === 'zh' ? '环境配置完成' : 'Environment ready')
+                  : (lang === 'zh' ? '环境配置不完整' : 'Environment incomplete')
+                }
+              </h4>
+              <p className={`text-sm mt-1 ${
+                status.allInstalled ? 'text-green-700' : 'text-yellow-700'
+              }`}>
+                {status.allInstalled 
+                  ? (lang === 'zh' ? 'Local Agent Terminal 已准备就绪，可以正常使用所有功能。' : 'Local Agent Terminal is ready. All features are available.')
+                  : (lang === 'zh' ? 'Python 未安装，某些功能可能无法使用。请安装 Python。' : 'Python is not installed. Some features may not work. Please install Python.')
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 安装指南 */}
+      {status && !status.allInstalled && !status.needsCheck && (
+        <div className="settings-alert settings-alert-info">
+          <h4 className="text-sm font-medium text-blue-900 mb-2">{lang === 'zh' ? '安装指南' : 'Installation Guide'}</h4>
+          <div className="space-y-2 text-sm text-blue-700">
+            {!status.python?.isInstalled && (
+              <div>
+                <p className="font-medium">{lang === 'zh' ? '安装 Python:' : 'Install Python:'}</p>
+                <code className="block bg-blue-100 px-2 py-1 rounded mt-1 text-xs">
+                  # macOS: brew install python<br/>
+                  # Linux: sudo apt install python3 python3-pip<br/>
+                  # Windows: {lang === 'zh' ? '下载官方安装包' : 'Download official installer'}
+                </code>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,8 @@
+{
+  "user": "your-email@example.com",
+  "password": "your-password-or-auth-code",
+  "smtpServer": "smtp.example.com",
+  "smtpPort": 465,
+  "useSsl": true,
+  "fromName": "Your Name"
+}

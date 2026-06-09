@@ -1,0 +1,209 @@
+{
+  "name": "local-agent",
+  "version": "1.1.0",
+  "description": "Local Agent Terminal - 本地 AI 助手工作台",
+  "main": "dist-electron/main/index.js",
+  "author": "Local Agent Contributors",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm run dev:renderer\" \"pnpm run dev:main\" \"pnpm run copy:templates\" \"wait-on http://localhost:5173 && pnpm run start:electron\"",
+    "dev:main": "tsc -p tsconfig.main.json --watch",
+    "dev:renderer": "vite",
+    "copy:templates": "node scripts/copy-templates.js",
+    "start": "electron .",
+    "start:electron": "cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "build": "pnpm run build:main && pnpm run copy:templates && pnpm run build:renderer",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "type-check": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
+    "type-check:server": "tsc -p tsconfig.server.json --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "postinstall": "electron-builder install-app-deps",
+    "pack": "pnpm run build && electron-builder --dir",
+    "dist": "pnpm run build && electron-builder",
+    "dist:mac": "node scripts/load-env-build.js --mac",
+    "dist:mac:x64": "node scripts/load-env-build.js --mac --x64",
+    "dist:mac:arm64": "node scripts/load-env-build.js --mac --arm64",
+    "dist:mac:local": "pnpm run build && electron-builder --mac --config.mac.identity=null --config.mac.notarize=false",
+    "dist:win": "node scripts/load-env-build.js --win",
+    "reset-dev": "bash scripts/reset-dev-data.sh",
+    "dev:web": "concurrently \"pnpm run dev:web-server\" \"pnpm run dev:web-renderer\" \"wait-on dist-server/server/index.js --delay 2000 && pnpm run start:web-dev\"",
+    "dev:web-docker": "concurrently \"pnpm run dev:web-server\" \"pnpm run dev:web-renderer\" \"wait-on dist-server/server/index.js --delay 2000 && pnpm run start:web-docker-dev\"",
+    "dev:web-server": "tsc -p tsconfig.server.json --watch",
+    "dev:web-renderer": "vite --mode web --port 5174",
+    "start:web-dev": "nodemon --watch dist-server --delay 2000ms --exec 'node -r dotenv/config dist-server/server/index.js dotenv_config_path=.env'",
+    "start:web-docker-dev": "nodemon --watch dist-server --delay 2000ms --exec 'node -r dotenv/config dist-server/server/index.js dotenv_config_path=.env.docker'",
+    "build:web": "pnpm run build:web-server && pnpm run build:web-renderer",
+    "build:web-server": "tsc -p tsconfig.server.json && node scripts/copy-templates-web.js",
+    "build:web-renderer": "vite build --mode web --outDir dist-web",
+    "start:web": "node dist-server/index.js",
+    "docker:build": "docker build -t local-agent:latest .",
+    "docker:build:multi": "docker buildx build --platform linux/amd64,linux/arm64 -t local-agent:latest --push .",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.9",
+    "@larksuiteoapi/node-sdk": "^1.59.0",
+    "@mariozechner/pi-agent-core": "^0.73.1",
+    "@mariozechner/pi-ai": "^0.73.1",
+    "@mariozechner/pi-coding-agent": "0.73.1",
+    "@mozilla/readability": "^0.6.0",
+    "@sinclair/typebox": "^0.34.48",
+    "@types/adm-zip": "^0.5.8",
+    "@wechatbot/wechatbot": "^2.1.1",
+    "adm-zip": "^0.5.16",
+    "agent-browser": "^0.25.4",
+    "ajv": "^8.12.0",
+    "body-parser": "^2.2.2",
+    "chokidar": "^3.5.3",
+    "cors": "^2.8.5",
+    "cron": "^4.4.0",
+    "dotenv": "^16.4.7",
+    "electron-updater": "^6.8.3",
+    "express": "^5.2.1",
+    "iconv-lite": "^0.7.2",
+    "jsonwebtoken": "^9.0.2",
+    "linkedom": "^0.18.5",
+    "lucide-react": "^0.563.0",
+    "luxon": "^3.7.2",
+    "nodemailer": "^8.0.1",
+    "proper-lockfile": "^4.1.2",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "ws": "^8.19.0",
+    "zod": "^3.22.0",
+    "zustand": "^4.4.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.4.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.6",
+    "@types/iconv-lite": "^0.0.1",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.10.0",
+    "@types/nodemailer": "^7.0.11",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.23",
+    "concurrently": "^8.2.0",
+    "cross-env": "^10.1.0",
+    "electron": "^39.0.0",
+    "electron-builder": "^24.9.0",
+    "electron-rebuild": "^3.2.9",
+    "eslint": "^8.54.0",
+    "nodemon": "^3.1.14",
+    "postcss": "^8.5.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0",
+    "wait-on": "^9.0.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@10.23.0",
+  "build": {
+    "appId": "com.localagent.app",
+    "productName": "Local Agent Terminal",
+    "icon": "icon.png",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/**/*.node",
+      "node_modules/agent-browser/bin/**/*",
+      "src/renderer/assets/s-logo-*.png",
+      "node.exe"
+    ],
+    "afterPack": "scripts/after-pack.js",
+    "compression": "normal",
+    "removePackageScripts": true,
+    "removePackageKeywords": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json",
+      "icon.png",
+      "src/renderer/assets/s-logo-mac.png",
+      "src/renderer/assets/s-logo-win.png",
+      "node_modules/agent-browser/bin/**/*",
+      "node_modules/agent-browser/dist/**/*",
+      "node_modules/agent-browser/package.json",
+      "node_modules/agent-browser/node_modules/**/*",
+      "node_modules/playwright-core/**/*",
+      "!node_modules/**/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!node_modules/**/{test,__tests__,tests,powered-test,example,examples}",
+      "!node_modules/**/*.d.ts",
+      "!node_modules/**/*.map",
+      "!node_modules/**/{*.md,*.txt,*.log}",
+      "!node_modules/**/{LICENSE,LICENCE,license,licence}",
+      "!node_modules/**/{.github,.vscode,.idea}",
+      "!node_modules/**/docs/**/*",
+      "!node_modules/.bin"
+    ],
+    "mac": {
+      "icon": "icon.png",
+      "category": "public.app-category.productivity",
+      "artifactName": "Local-Agent-Terminal-${version}-mac-${arch}.${ext}",
+      "identity": null,
+      "notarize": false,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "icon": "icon.png",
+      "files": [
+        "node.exe"
+      ],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "publisherName": "Local Agent Contributors",
+      "verifyUpdateCodeSignature": false,
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "Local-Agent-Terminal-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

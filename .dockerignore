@@ -1,0 +1,51 @@
+# 构建时不需要的文件
+
+# 依赖（构建阶段会重新安装）
+node_modules/
+
+# 构建产物（构建阶段会重新生成）
+dist/
+dist-electron/
+dist-web/
+dist-server/
+release/
+build/
+
+# 开发环境文件
+.env
+.env.local
+.env.web
+.env.*.local
+
+# Electron 相关（Docker 不需要）
+*.dmg
+*.exe
+*.AppImage
+*.deb
+node.exe
+DeveloperIDG2CA.cer
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 日志
+*.log
+*.pid
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+.kiro/
+
+# Git
+.git/
+.github/
+
+# 测试
+coverage/

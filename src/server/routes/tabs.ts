@@ -1,0 +1,455 @@
+/**
+ * Tab 管理 API 路由
+ */
+
+import { Router, Response, RequestHandler } from 'express';
+import type { AuthRequest } from '../types';
+import type { GatewayAdapter } from '../gateway-adapter';
+import { getErrorMessage } from '../../shared/utils/error-handler';
+
+export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
+  const router = Router();
+  
+  /**
+   * GET /api/tabs
+   * 获取所有 Tab
+   */
+  const getAllTabs: RequestHandler = async (req, res) => {
+    try {
+      const tabs = gatewayAdapter.getAllTabs();
+      res.json({ tabs });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+  
+  /**
+   * POST /api/tabs
+   * 创建新 Tab
+   */
+  const createTab: RequestHandler = async (req, res) => {
+    try {
+      const { title } = req.body;
+      // 不传 title，让 Gateway 自动生成唯一名称
+      const tab = await gatewayAdapter.createTab(title);
+      res.json({ tab });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+  
+  /**
+   * GET /api/tabs/:tabId
+   * 获取指定 Tab 信息
+   */
+  const getTab: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const tab = gatewayAdapter.getTab(tabId as string);
+      
+      if (!tab) {
+        res.status(404).json({ error: 'Tab 不存在' });
+        return;
+      }
+      
+      res.json({ tab });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+  
+  /**
+   * DELETE /api/tabs/:tabId
+   * 关闭指定 Tab
+   */
+  const closeTab: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      await gatewayAdapter.closeTab(tabId as string);
+      res.json({ success: true, message: 'Tab 已关闭' });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+  
+  /**
+   * POST /api/tabs/:tabId/messages
+   * 发送消息到指定 Tab
+   */
+  const sendMessage: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { content, displayContent, clearHistory } = req.body;
+      
+      if (!content) {
+        res.status(400).json({ error: '消息内容不能为空' });
+        return;
+      }
+      
+      await gatewayAdapter.handleSendMessage(tabId as string, content, clearHistory, displayContent);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+  
+  /**
+   * GET /api/tabs/:tabId/messages
+   * 获取 Tab 的消息历史
+   */
+  const getMessages: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const before = req.query.before as string;
+      
+      const messages = await gatewayAdapter.getMessages(tabId as string, { limit, before });
+      res.json({ messages, hasMore: messages.length === limit });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+  
+  /**
+   * POST /api/tabs/stop-generation
+   * 停止生成
+   */
+  const stopGeneration: RequestHandler = async (req, res) => {
+    try {
+      const { sessionId } = req.body;
+      await gatewayAdapter.stopGeneration(sessionId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+  
+  router.get('/', getAllTabs);
+  router.post('/', createTab);
+  router.get('/:tabId', getTab);
+  router.delete('/:tabId', closeTab);
+  router.post('/:tabId/messages', sendMessage);
+  router.get('/:tabId/messages', getMessages);
+  router.post('/stop-generation', stopGeneration);
+
+  // Tab 模型配置
+  const setTabModelConfig: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      let { modelConfig } = req.body;
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { updateTabModelConfig, getTabConfig, saveTabConfig } = await import('../../main/database/tab-config');
+      const store = SystemConfigStore.getInstance();
+
+      if (modelConfig && modelConfig.modelId && !modelConfig.contextWindow) {
+        const { getContextWindowFromModelId } = await import('../../main/utils/model-info-fetcher');
+        modelConfig.contextWindow = getContextWindowFromModelId(modelConfig.modelId);
+      }
+
+      // 确保 tab 在数据库中有记录
+      const existing = getTabConfig(store.getDb(), tabId as string);
+      if (!existing) {
+        const { getGatewayInstance } = await import('../../main/gateway');
+        const gw = getGatewayInstance();
+        const tab = gw?.getTabManager().getAllTabs().find((t: any) => t.id === tabId);
+        if (tab) {
+          saveTabConfig(store.getDb(), {
+            id: tabId as string,
+            title: tab.title,
+            type: tab.type === 'connector' ? 'connector' : tab.type === 'scheduled_task' ? 'task' : 'manual',
+            memoryFile: tab.memoryFile || null,
+            agentName: tab.agentName || null,
+            isPersistent: true,
+            createdAt: tab.createdAt,
+            lastActiveAt: tab.lastActiveAt,
+            connectorId: tab.connectorId,
+            conversationId: tab.conversationId,
+            modelConfig,
+          });
+        }
+      } else {
+        updateTabModelConfig(store.getDb(), tabId as string, modelConfig);
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+
+  const getTabModelConfig: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const store = SystemConfigStore.getInstance();
+      const tabConfig = store.getTabConfig(tabId as string);
+      res.json({ success: true, modelConfig: tabConfig?.modelConfig || null });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+
+  router.post('/:tabId/model-config', setTabModelConfig);
+  router.get('/:tabId/model-config', getTabModelConfig);
+
+  // 重命名 Tab
+  const renameTab: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { title } = req.body;
+      if (!title) return res.status(400).json({ success: false, error: 'title is required' });
+      if (title.length > 20) return res.json({ success: false, error: '名称不能超过 20 个字符' });
+
+      const { getGatewayInstance } = await import('../../main/gateway');
+      const gateway = getGatewayInstance();
+      if (!gateway) return res.status(500).json({ success: false, error: 'Gateway 未初始化' });
+
+      const tabManager = gateway.getTabManager();
+      const allTabs = tabManager.getAllTabs();
+      const tab = allTabs.find(t => t.id === tabId);
+      let finalTitle = title;
+      if (tab?.type === 'connector') {
+        if (tab.connectorId === 'feishu' && !title.startsWith('FS-')) {
+          finalTitle = `FS-${title}`;
+        } else if (tab.connectorId?.startsWith('wechat') && !title.startsWith('WX-')) {
+          finalTitle = `WX-${title}`;
+        }
+      }
+
+      // 检查重名
+      const duplicate = allTabs.find(t => t.id !== tabId && t.title === finalTitle);
+      if (duplicate) {
+        return res.json({ success: false, error: `名称 "${finalTitle}" 已被其他 Tab 使用` });
+      }
+
+      // 更新 tab 标题
+      tabManager.updateTabTitle(tabId as string, finalTitle);
+
+      // 更新 agentName
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const store = SystemConfigStore.getInstance();
+      store.updateTabAgentName(tabId as string, title);
+
+      // 同步更新内存中 tab 的 agentName
+      if (tab) tab.agentName = title;
+
+      // 发送前端通知更新提示符（通过虚拟窗口 → WebSocket）
+      const mainWindow = gateway.getMainWindow();
+      if (mainWindow) {
+        mainWindow.webContents.send('name-config:updated', {
+          tabId: tabId as string,
+          agentName: finalTitle,
+        });
+      }
+
+      // 标记系统提示词需要重建
+      gateway.invalidateAllSystemPrompts();
+
+      res.json({ success: true, title: finalTitle });
+    } catch (error) {
+      res.status(500).json({ success: false, error: getErrorMessage(error) });
+    }
+  };
+
+  router.post('/:tabId/rename', renameTab);
+
+  // 工作提示词
+  const getTabWorkPrompt: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const store = SystemConfigStore.getInstance();
+      const tabConfig = store.getTabConfig(tabId as string);
+      res.json({ success: true, workPrompt: tabConfig?.workPrompt || '' });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+
+  const setTabWorkPrompt: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { workPrompt } = req.body;
+      const { updateTabWorkPrompt } = await import('../../main/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const store = SystemConfigStore.getInstance();
+      const trimmed = workPrompt ? workPrompt.substring(0, 10000) : null;
+      updateTabWorkPrompt(store.getDb(), tabId as string, trimmed);
+      const { getGatewayInstance } = await import('../../main/gateway');
+      const gateway = getGatewayInstance();
+      if (gateway) gateway.invalidateSessionSystemPrompt(tabId as string);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+
+  router.get('/:tabId/work-prompt', getTabWorkPrompt);
+  router.post('/:tabId/work-prompt', setTabWorkPrompt);
+
+  // Skill 白名单
+  const getTabSkillWhitelist: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const store = SystemConfigStore.getInstance();
+      const tabConfig = store.getTabConfig(tabId as string);
+      res.json({ success: true, whitelist: tabConfig?.skillWhitelist || [] });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+
+  const setTabSkillWhitelist: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { whitelist } = req.body;
+      const { updateTabSkillWhitelist } = await import('../../main/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const store = SystemConfigStore.getInstance();
+      updateTabSkillWhitelist(store.getDb(), tabId as string, whitelist);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+
+  router.get('/:tabId/skill-whitelist', getTabSkillWhitelist);
+  router.post('/:tabId/skill-whitelist', setTabSkillWhitelist);
+
+  // 工作目录
+  const getTabWorkspaceDirs: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const store = SystemConfigStore.getInstance();
+      const tabConfig = store.getTabConfig(tabId as string);
+      res.json({ success: true, workspaceDirs: tabConfig?.workspaceDirs || null });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+
+  const setTabWorkspaceDirs: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { dirs } = req.body;
+      const { updateTabWorkspaceDirs } = await import('../../main/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const store = SystemConfigStore.getInstance();
+      updateTabWorkspaceDirs(store.getDb(), tabId as string, dirs);
+      // 销毁 Runtime，下次使用时用新工作目录重建
+      const { getGatewayInstance } = await import('../../main/gateway');
+      const gw = getGatewayInstance();
+      if (gw) {
+        await gw.destroySessionRuntime(tabId as string);
+        gw.invalidateSessionSystemPrompt(tabId as string);
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+
+  router.get('/:tabId/workspace-dirs', getTabWorkspaceDirs);
+  router.post('/:tabId/workspace-dirs', setTabWorkspaceDirs);
+
+  // Tab 生图工具配置
+  const getTabImageToolConfig: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const store = SystemConfigStore.getInstance();
+      const row = store.getDb().prepare('SELECT image_tool_config FROM agent_tabs WHERE id = ?').get(tabId) as any;
+      const config = row?.image_tool_config ? JSON.parse(row.image_tool_config) : null;
+      res.json({ success: true, config });
+    } catch (error) {
+      res.status(500).json({ success: false, error: getErrorMessage(error) });
+    }
+  };
+
+  const setTabImageToolConfig: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { config } = req.body;
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const store = SystemConfigStore.getInstance();
+
+      // 验证 API Key 配额后缀
+      if (config && config.apiKey) {
+        const { parseApiKeyQuota } = await import('../../main/tools/providers/image-quota');
+        const parsed = parseApiKeyQuota(config.apiKey, store);
+        if (!parsed) {
+          res.json({ success: false, error: 'API Key 无效，请检查是否正确' });
+          return;
+        }
+      }
+
+      const configJson = config ? JSON.stringify(config) : null;
+      store.getDb().prepare('UPDATE agent_tabs SET image_tool_config = ? WHERE id = ?').run(configJson, tabId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: getErrorMessage(error) });
+    }
+  };
+
+  router.get('/:tabId/image-tool-config', getTabImageToolConfig);
+  router.post('/:tabId/image-tool-config', setTabImageToolConfig);
+
+  // 回复模式
+  const getTabReplyMode: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { getTabConfig } = await import('../../main/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const db = SystemConfigStore.getInstance().getDb();
+      const config = getTabConfig(db, tabId as string);
+      res.json({ success: true, replyMode: config?.replyMode || 'agent' });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+
+  const setTabReplyMode: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { replyMode } = req.body;
+      const { updateTabReplyMode } = await import('../../main/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const db = SystemConfigStore.getInstance().getDb();
+      updateTabReplyMode(db, tabId as string, replyMode);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: getErrorMessage(error) });
+    }
+  };
+
+  router.get('/:tabId/reply-mode', getTabReplyMode);
+  router.post('/:tabId/reply-mode', setTabReplyMode);
+
+  // Fast 模式
+  const getTabFastMode: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const fastMode = gatewayAdapter.isTabFastMode(tabId as string);
+      res.json({ success: true, fastMode });
+    } catch (error) {
+      res.status(500).json({ success: false, error: getErrorMessage(error) });
+    }
+  };
+
+  const setTabFastMode: RequestHandler = async (req, res) => {
+    try {
+      const { tabId } = req.params;
+      const { fastMode } = req.body;
+      gatewayAdapter.setTabFastMode(tabId as string, fastMode === true);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: getErrorMessage(error) });
+    }
+  };
+
+  router.get('/:tabId/fast-mode', getTabFastMode);
+  router.post('/:tabId/fast-mode', setTabFastMode);
+  
+  return router;
+}
