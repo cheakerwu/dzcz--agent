@@ -8,6 +8,7 @@
 export const TOOL_NAMES = {
   // 核心工具
   BROWSER: 'browser',
+  BROWSER_ACT: 'browser_act',
   
   // 文件操作
   FILE_READ: 'file_read',
@@ -119,4 +120,3 @@ export type ToolName = typeof TOOL_NAMES[keyof typeof TOOL_NAMES];
 export function isMockTool(toolName: string): boolean {
   return toolName.startsWith(TOOL_NAMES.MOCK_PREFIX);
 }
-
