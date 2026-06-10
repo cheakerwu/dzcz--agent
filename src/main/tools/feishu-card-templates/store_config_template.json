@@ -1,0 +1,58 @@
+{
+  "store_id": {
+    "description": "门店唯一标识，建议使用平台门店ID",
+    "example": "eleme_123456"
+  },
+  "name": {
+    "description": "门店名称",
+    "example": "趣东北·东北小馆(石岩店)"
+  },
+  "platform": {
+    "description": "所属平台",
+    "example": "eleme",
+    "options": ["eleme", "meituan", "both"]
+  },
+  "chat_id": {
+    "description": "飞书群组 ID（用于发送经营数据卡片）",
+    "example": "oc_xxxxxxxxxxxxxxxx"
+  },
+  "manager": {
+    "description": "门店负责人姓名",
+    "example": "张三"
+  },
+  "manager_id": {
+    "description": "负责人飞书 open_id（用于接收预警通知）",
+    "example": "ou_xxxxxxxxxxxxxxxx"
+  },
+  "app_token": {
+    "description": "多维表格 app_token（存储经营数据）",
+    "example": "bascnxxxxxxxxxxxxxxx"
+  },
+  "table_id": {
+    "description": "数据表 ID",
+    "example": "tblxxxxxxxxxxxxxxx"
+  },
+  "data_fields_mapping": {
+    "description": "RPA采集字段与多维表格字段的映射关系",
+    "example": {
+      "营业额": "revenue",
+      "有效订单": "valid_orders",
+      "单均实付": "avg_order_value",
+      "曝光人数": "exposure",
+      "进店转化率": "visit_rate",
+      "下单转化率": "order_rate"
+    }
+  },
+  "warning_thresholds": {
+    "description": "预警阈值配置",
+    "example": {
+      "revenue_drop_rate": 20,
+      "bad_review_count": 3,
+      "order_drop_rate": 15
+    }
+  },
+  "collect_schedule": {
+    "description": "数据采集定时任务（cron 表达式）",
+    "example": "0 10 * * *"
+  }
+}

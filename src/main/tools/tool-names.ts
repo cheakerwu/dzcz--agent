@@ -93,6 +93,18 @@ export const TOOL_NAMES = {
   FEISHU_DOC_ADD_COMMENT: 'feishu_doc_add_comment',
   FEISHU_DRIVE_DOWNLOAD: 'feishu_drive_download',
   FEISHU_DOC_INSERT_RICH_BLOCKS: 'feishu_doc_insert_rich_blocks',
+
+  // 飞书消息卡片工具
+  FEISHU_SEND_CARD: 'feishu_send_card',
+  FEISHU_UPDATE_CARD: 'feishu_update_card',
+  FEISHU_BATCH_SEND_CARD: 'feishu_batch_send_card',
+
+  // 飞书多维表格工具
+  FEISHU_BITABLE_LIST_RECORDS: 'feishu_bitable_list_records',
+  FEISHU_BITABLE_CREATE_RECORD: 'feishu_bitable_create_record',
+  FEISHU_BITABLE_BATCH_CREATE: 'feishu_bitable_batch_create',
+  FEISHU_BITABLE_UPDATE_RECORD: 'feishu_bitable_update_record',
+  FEISHU_STORE_CONFIG: 'feishu_store_config',
   
   // AI 对话工具
   CHAT: 'chat',

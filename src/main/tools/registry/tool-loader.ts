@@ -38,6 +38,8 @@ import { wecomToolPlugin } from '../wecom-tool';
 import { crossTabCallToolPlugin } from '../cross-tab-call-tool';
 import { commandToolPlugin } from '../command-tool';
 import { feishuDocToolPlugin } from '../feishu-doc-tool';
+import { feishuCardToolPlugin } from '../feishu-card-tool';
+import { feishuBitableToolPlugin } from '../feishu-bitable-tool';
 
 /**
  * 解析 plugin.create() 的返回值，统一处理 Promise 和数组/单个工具
@@ -216,6 +218,12 @@ export class ToolLoader {
 
       // 飞书云文档工具
       tools.push(...await resolvePluginTools(feishuDocToolPlugin.create(pluginOpts)));
+
+      // 飞书消息卡片工具
+      tools.push(...await resolvePluginTools(feishuCardToolPlugin.create(pluginOpts)));
+
+      // 飞书多维表格工具
+      tools.push(...await resolvePluginTools(feishuBitableToolPlugin.create(pluginOpts)));
 
     } catch (error) {
       console.error('❌ 加载内置工具失败:', error);
