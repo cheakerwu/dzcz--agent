@@ -731,6 +731,7 @@ Expected: renderer compiles and admin console still renders.
 - [x] Feishu private-message login command handler.
 - [x] Admin UI for sync, login requests, and risk state.
 - [x] Platform-specific Meituan login verifier.
+- [x] Local simulated Feishu/browser-act login flow test.
 - [ ] End-to-end manual verification with a non-production merchant account.
 
 Local browser-act feasibility check on 2026-06-10:
@@ -758,6 +759,19 @@ First rollout platform gate:
 Browser selection gate:
   matched by platform or store name -> allowed
   no explicit semantic match -> rejected with admin remediation
+```
+
+Local simulated E2E coverage on 2026-06-10:
+
+```text
+script: scripts/feishu-remote-login-flow.test.mjs
+coverage:
+  Feishu /login command -> private open_id message
+  10-minute login request expiry
+  browser-act browser open + remote-assist command construction
+  /login-done -> browser-act URL/title/markdown verification
+  verified browser profile storage_state_ref = browser-act:<id>
+  prompt context exposes capability label/action level but not browser-act id
 ```
 
 ## Manual Verification Script

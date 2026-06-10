@@ -26,8 +26,13 @@ import { AdminControlPlaneService } from '../../admin-control-plane/service';
 import { BrowserActControlService } from '../../browser-act/browser-act-control-service';
 import { FeishuDocumentHandler } from './document-handler';
 import { FeishuLoginCommandHandler, parseLoginCommand } from './login-command-handler';
-import type { LoginRequestStartResult } from './login-command-handler';
-import { resolveMerchantLoginPlatform, selectBrowserActBrowserForLogin } from './login-platforms';
+import {
+  cancelBrowserActLoginRequest,
+  completeBrowserActLoginRequest,
+  getBrowserActLoginStatus,
+  startBrowserActLoginRequest,
+  type FeishuRemoteLoginStartInput,
+} from './browser-act-login-flow';
 
 
 export class FeishuConnector implements Connector {
@@ -264,147 +269,48 @@ export class FeishuConnector implements Connector {
     return new AdminControlPlaneService(SystemConfigStore.getInstance().getDb());
   }
 
-  private async startBrowserActLogin(input: {
-    platform: string;
-    storeName: string;
-    requesterUserId: string;
-    requesterOpenId?: string;
-    requesterName?: string;
-    conversationId: string;
-    conversationType: 'p2p' | 'group';
-  }): Promise<LoginRequestStartResult> {
-    const configStore = SystemConfigStore.getInstance();
-    const service = this.getAdminControlPlaneService();
-    service.ensureSchema();
-    service.expireBrowserLoginRequests();
-
-    const platformConfig = resolveMerchantLoginPlatform(input.platform);
-    const platform = platformConfig.platform;
-    const store = service.listStores().find((item) => item.name === input.storeName || item.name.includes(input.storeName));
-    if (!store) throw new Error(`未找到门店：${input.storeName}`);
-
-    let employee = service.listEmployees().find((item) =>
-      item.connectorId === 'feishu' && (item.userId === input.requesterUserId || item.openId === input.requesterOpenId)
-    );
-    if (!employee) {
-      employee = service.upsertEmployee({
-        connectorId: 'feishu',
-        userId: input.requesterUserId,
-        openId: input.requesterOpenId,
-        displayName: input.requesterName || input.requesterUserId,
-        role: 'operator',
-        status: 'active',
-      }, 'feishu-login');
-    }
-
-    const platformAccount = service.listPlatformAccounts().find((account) =>
-      account.platform === platform && (!account.storeId || account.storeId === store.id) && account.status === 'active'
-    );
-    const request = service.createBrowserLoginRequest({
-      connectorId: 'feishu',
-      requesterUserId: input.requesterUserId,
-      requesterOpenId: input.requesterOpenId,
-      employeeId: employee.id,
-      storeId: store.id,
-      platform,
-      platformAccountId: platformAccount?.id,
-      loginUrl: platformConfig.loginUrl,
-    }, 'feishu-login');
-
-    const settings = configStore.getWorkspaceSettings();
-    const browserAct = new BrowserActControlService({ workspaceDir: settings.workspaceDir });
-    try {
-      const browsers = await browserAct.listBrowsers();
-      const browser = selectBrowserActBrowserForLogin({
-        platform,
-        storeName: input.storeName,
-        browsers,
-      });
-
-      await browserAct.openBrowserForLogin({
-        sessionName: request.sessionName,
-        browserId: browser.id,
-        url: request.loginUrl,
-      });
-      const remoteAssistUrl = await browserAct.createRemoteAssist({
-        sessionName: request.sessionName,
-        objective: `请登录${input.storeName}${input.platform}商家后台。不要分享密码、验证码或 cookie 给任何人。`,
-      });
-      service.markBrowserLoginRequestWaiting(request.id, browser.id, 'feishu-login');
-      return {
-        requestCode: request.id,
-        expiresAt: request.expiresAt,
-        remoteAssistUrl,
-      };
-    } catch (error) {
-      service.markBrowserLoginRequestFailed(request.id, getErrorMessage(error), 'feishu-login');
-      throw error;
-    }
+  private createBrowserActControlService(): BrowserActControlService {
+    const settings = SystemConfigStore.getInstance().getWorkspaceSettings();
+    return new BrowserActControlService({ workspaceDir: settings.workspaceDir });
   }
 
-  private getLoginRequest(service: AdminControlPlaneService, requestCode: string, requesterUserId?: string, requesterOpenId?: string) {
-    const request = service.listBrowserLoginRequests().find((item) => item.id === requestCode);
-    if (!request) throw new Error(`未找到登录请求：${requestCode}`);
-    if (requesterUserId && request.requesterUserId !== requesterUserId && request.requesterOpenId !== requesterOpenId) {
-      throw new Error('只能处理你本人发起的登录请求');
-    }
-    return request;
-  }
-
-  private riskForLoginRequest(service: AdminControlPlaneService, request: ReturnType<AdminControlPlaneService['listBrowserLoginRequests']>[number]) {
-    const account = request.platformAccountId
-      ? service.listPlatformAccounts().find((item) => item.id === request.platformAccountId)
-      : undefined;
-    if (account?.riskAccountClass === 'critical') return { riskLevel: 'critical' as const, allowedActionLevel: 'destructive' as const };
-    if (account?.riskAccountClass === 'high_risk') return { riskLevel: 'high' as const, allowedActionLevel: 'high_risk_write' as const };
-    if (account?.riskAccountClass === 'sensitive') return { riskLevel: 'medium' as const, allowedActionLevel: 'read_only' as const };
-    return { riskLevel: 'medium' as const, allowedActionLevel: 'read_only' as const };
+  private async startBrowserActLogin(input: FeishuRemoteLoginStartInput) {
+    return startBrowserActLoginRequest({
+      service: this.getAdminControlPlaneService(),
+      browserAct: this.createBrowserActControlService(),
+      input,
+      actorId: 'feishu-login',
+    });
   }
 
   private async completeBrowserActLogin(requestCode: string, requesterUserId: string, requesterOpenId?: string): Promise<string> {
-    const service = this.getAdminControlPlaneService();
-    const request = this.getLoginRequest(service, requestCode, requesterUserId, requesterOpenId);
-    if (request.status === 'expired') throw new Error('登录请求已过期，请重新发起 /login');
-    if (!request.browserActBrowserId) throw new Error('登录请求还没有绑定 browser-act 浏览器');
-
-    const settings = SystemConfigStore.getInstance().getWorkspaceSettings();
-    const browserAct = new BrowserActControlService({ workspaceDir: settings.workspaceDir });
-    const verification = await browserAct.verifyLogin({
-      sessionName: request.sessionName,
-      platform: request.platform,
+    return completeBrowserActLoginRequest({
+      service: this.getAdminControlPlaneService(),
+      browserAct: this.createBrowserActControlService(),
+      requestCode,
+      requesterUserId,
+      requesterOpenId,
+      actorId: 'feishu-login',
     });
-    if (!verification.healthy) {
-      const reason = verification.reason || '未确认登录成功';
-      service.markBrowserLoginRequestFailed(request.id, reason, 'feishu-login');
-      throw new Error(`${reason}。请确认远程协助页面已进入商家后台后重新发起登录。`);
-    }
-
-    const store = service.listStores().find((item) => item.id === request.storeId);
-    const policy = this.riskForLoginRequest(service, request);
-    const profile = service.upsertBrowserProfileFromBrowserAct({
-      platform: request.platform,
-      label: `${store?.name || request.storeId}${request.platform}登录态`,
-      storeId: request.storeId,
-      browserActBrowserId: request.browserActBrowserId,
-      riskLevel: policy.riskLevel,
-      allowedActionLevel: policy.allowedActionLevel,
-      lastSuccessfulUseAt: Date.now(),
-    }, 'feishu-login');
-    service.markBrowserLoginRequestHealthy(request.id, profile.id, 'feishu-login');
-    return `登录态已登记：${profile.label}。后台只保存 browser-act 引用，不保存 cookie、密码或验证码。`;
   }
 
   private async cancelBrowserActLogin(requestCode: string, requesterUserId: string, requesterOpenId?: string): Promise<string> {
-    const service = this.getAdminControlPlaneService();
-    const request = this.getLoginRequest(service, requestCode, requesterUserId, requesterOpenId);
-    service.markBrowserLoginRequestCancelled(request.id, 'feishu-login');
-    return `已取消登录请求：${requestCode}`;
+    return cancelBrowserActLoginRequest({
+      service: this.getAdminControlPlaneService(),
+      requestCode,
+      requesterUserId,
+      requesterOpenId,
+      actorId: 'feishu-login',
+    });
   }
 
   private async getBrowserActLoginStatus(requestCode: string, requesterUserId: string, requesterOpenId?: string): Promise<string> {
-    const service = this.getAdminControlPlaneService();
-    const request = this.getLoginRequest(service, requestCode, requesterUserId, requesterOpenId);
-    return `登录请求 ${requestCode} 当前状态：${request.status}，过期时间：${new Date(request.expiresAt).toLocaleString()}`;
+    return getBrowserActLoginStatus({
+      service: this.getAdminControlPlaneService(),
+      requestCode,
+      requesterUserId,
+      requesterOpenId,
+    });
   }
   
   // ========== 消息处理 ==========
