@@ -41,6 +41,7 @@ import { commandToolPlugin } from '../command-tool';
 import { feishuDocToolPlugin } from '../feishu-doc-tool';
 import { feishuCardToolPlugin } from '../feishu-card-tool';
 import { feishuBitableToolPlugin } from '../feishu-bitable-tool';
+import { ocrToolPlugin } from '../ocr-tool';
 
 /**
  * 解析 plugin.create() 的返回值，统一处理 Promise 和数组/单个工具
@@ -230,6 +231,11 @@ export class ToolLoader {
 
       // 飞书多维表格工具
       tools.push(...await resolvePluginTools(feishuBitableToolPlugin.create(pluginOpts)));
+
+      // OCR 文字识别工具
+      if (isEnabled(TOOL_NAMES.OCR_IMAGE) || isEnabled(TOOL_NAMES.OCR_PDF)) {
+        tools.push(...await resolvePluginTools(ocrToolPlugin.create(pluginOpts)));
+      }
 
     } catch (error) {
       console.error('❌ 加载内置工具失败:', error);
