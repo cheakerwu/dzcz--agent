@@ -34,6 +34,10 @@ export const TOOL_NAMES = {
   // 文档分析工具
   DOC_ANALYSIS: 'doc_analysis',
 
+  // OCR 文字识别
+  OCR_IMAGE: 'ocr_image',
+  OCR_PDF: 'ocr_pdf',
+
   // Web 搜索
   WEB_SEARCH: 'web_search',
   
@@ -115,7 +119,10 @@ export const TOOL_NAMES = {
   
   // 系统指令工具
   SYSTEM_COMMAND: 'system_command',
-  
+
+  // MCP 适配器
+  MCP_ADAPTER: 'mcp_adapter',
+
   // Mock 工具（测试用）
   MOCK_TOOL: 'mock_tool',
   MOCK_LONG_RUNNING: 'mock_long_running',

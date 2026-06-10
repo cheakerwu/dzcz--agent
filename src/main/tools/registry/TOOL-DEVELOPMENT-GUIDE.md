@@ -82,7 +82,23 @@ import { myToolPlugin } from '../my-tool';
 tools.push(...await resolvePluginTools(myToolPlugin.create(pluginOpts)));
 ```
 
-### 4. 验证
+### 4. 配置工具分组（可选，渐进式披露）
+
+在 `tool-groups.ts` 中将工具添加到合适的组：
+
+```typescript
+export const TOOL_GROUPS: Record<ToolGroupName, string[]> = {
+  // ...已有组
+  media: ['media_analysis', 'doc_analysis', 'my_tool'],  // 添加到现有组
+};
+
+export const KEYWORD_TRIGGERS: Record<ToolGroupName, string[]> = {
+  // ...已有触发词
+  media: ['...', '我的工具'],  // 添加触发关键词
+};
+```
+
+### 5. 验证
 
 ```bash
 pnpm run type-check
@@ -129,6 +145,20 @@ if (configStore && isEnabled(TOOL_NAMES.MY_TOOL)) {
 }
 ```
 
+## 渐进式披露架构
+
+工具分为两层：
+- **核心层（Core）**：始终暴露，覆盖基础操作（read/write/edit/bash/web_fetch/memory）
+- **按需层（On-demand）**：根据用户消息关键词动态注入
+
+工作流程：
+1. 用户消息进入
+2. `detectTriggeredGroups(message)` 检测触发的工具组
+3. `selectToolsProgressively(allTools, message)` 筛选工具
+4. 只暴露核心工具 + 触发的按需工具
+
+好处：减少每次请求的 token 消耗，让 AI 更专注于相关工具。
+
 ## 示例文件
 
 | 文件 | 说明 |
@@ -137,7 +167,8 @@ if (configStore && isEnabled(TOOL_NAMES.MY_TOOL)) {
 | `web-fetch-tool.ts` | 简单工具（无配置） |
 | `web-search-tool.ts` | 需要 configStore 的工具 |
 | `connector-tool.ts` | 返回多个工具的 plugin |
-| `email-tool.ts` | 带外部依赖的工具 |
+| `ocr-tool.ts` | 通过 Python 子进程调用外部引擎的工具 |
+| `tool-groups.ts` | 渐进式披露的工具分组配置 |
 
 ## 相关文件
 
@@ -147,3 +178,4 @@ if (configStore && isEnabled(TOOL_NAMES.MY_TOOL)) {
 | `tool-loader.ts` | 工具加载器（resolvePluginTools） |
 | `tool-names.ts` | 工具名称常量 |
 | `tool-registry.ts` | 工具注册表（启用/禁用） |
+| `tool-groups.ts` | 渐进式披露配置 |
