@@ -61,7 +61,7 @@ export function saveAgentName(db: Database.Database, agentName: string): void {
     // 插入默认记录
     db.prepare(`
       INSERT INTO name_config (id, agent_name, user_name)
-      VALUES (1, ?, 'user')
+      VALUES (1, ?, '店长')
     `).run(trimmedName);
   } else {
     // 更新

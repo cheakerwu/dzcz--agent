@@ -24,7 +24,7 @@ const zh: Dict = {
   'skill.title': 'Skill 管理器',
   'skill.search_placeholder': '搜索 Skill...',
   'skill.search': '搜索',
-  'skill.search_hint': '💡 Skill 是可扩展的功能模块，可以帮助 点之出众 完成 PDF 处理、视频下载、图片编辑等专业任务。输入关键词搜索，选择合适的 Skill 点击"安装"即可使用。',
+  'skill.search_hint': '💡 Skill 是可扩展的执行能力模块，可以帮助点之出众完成商家运营、网页自动化、文件处理、数据核查等内部任务。输入关键词搜索，选择合适的 Skill 点击"安装"即可使用。',
   'skill.tab_installed': '已安装',
   'skill.tab_available': '可用',
   'skill.loading': '加载中...',

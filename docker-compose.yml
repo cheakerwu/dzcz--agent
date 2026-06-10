@@ -1,11 +1,11 @@
 services:
-  deepbot:
-    image: deepbot:latest
+  dianbot:
+    image: dianbot:latest
     build:
       context: .
       dockerfile: Dockerfile
       # 多架构构建：linux/amd64（x64）和 linux/arm64（Apple Silicon / ARM 服务器）
-      # 使用 buildx 时启用：docker buildx build --platform linux/amd64,linux/arm64 -t deepbot:latest .
+      # 使用 buildx 时启用：docker buildx build --platform linux/amd64,linux/arm64 -t dianbot:latest .
       # platforms:
       #   - linux/amd64
       #   - linux/arm64
