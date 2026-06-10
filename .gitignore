@@ -53,3 +53,4 @@ agent-browser-main/
 *.gz
 /scripts/package-releases.sh
 /docs/deepbot-as-harness-engineering.md
+.worktrees/
