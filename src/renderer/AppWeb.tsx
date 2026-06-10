@@ -1,5 +1,5 @@
 /**
- * Local Agent Terminal Web 版本主应用组件
+ * 点之出众 Web 版本主应用组件
  * 使用统一 API 适配器，支持 HTTP + WebSocket 通信
  */
 

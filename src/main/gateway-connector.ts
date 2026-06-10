@@ -18,6 +18,7 @@ import { sendToWindow } from '../shared/utils/webcontents-utils';
 import { SystemConfigStore } from './database/system-config-store';
 import { updateTabMemoryFile } from './database/tab-config';
 import { createLogger } from '../shared/utils/logger';
+import { DEFAULT_FEISHU_WORK_PROMPT } from '../shared/constants/feishu-work-prompt';
 import type { SessionManager } from './session/session-manager';
 import type { AgentRuntime } from './agent-runtime/index';
 import type { ConnectorManager } from './connectors/connector-manager';
@@ -1395,8 +1396,11 @@ Use the file_read tool to read the file content.`
       const db = store.getDb();
       const { updateTabWorkPrompt, updateTabWorkspaceDirs } = require('./database/tab-config');
 
-      // 工作提示词：从 app setting 读取
-      const workPrompt = store.getAppSetting(defaultPromptKey);
+      // 工作提示词：从 app setting 读取；飞书首次部署时提供内置默认模板。
+      const savedWorkPrompt = store.getAppSetting(defaultPromptKey);
+      const workPrompt = savedWorkPrompt === null && connectorId === 'feishu'
+        ? DEFAULT_FEISHU_WORK_PROMPT
+        : savedWorkPrompt;
       if (workPrompt) {
         updateTabWorkPrompt(db, newTabId, workPrompt);
       }

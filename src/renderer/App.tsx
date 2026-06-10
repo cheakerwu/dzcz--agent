@@ -1,5 +1,5 @@
 /**
- * Local Agent Terminal 主应用组件
+ * 点之出众 主应用组件
  */
 
 import React, { useState, useEffect, createContext } from 'react';

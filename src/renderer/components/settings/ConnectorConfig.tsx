@@ -9,6 +9,7 @@ import { api } from '../../api';
 import { showToast } from '../../utils/toast';
 import { getLanguage } from '../../i18n';
 import { Check, Shield, Trash2, Copy, Link, Play, Square, X, FileText, RefreshCw, Pencil, Plus, FolderOpen } from 'lucide-react';
+import { DEFAULT_FEISHU_WORK_PROMPT } from '../../../shared/constants/feishu-work-prompt';
 
 interface ConnectorConfigProps {
   onClose: () => void;
@@ -804,7 +805,7 @@ export function ConnectorConfig({ onClose, onNavigate }: ConnectorConfigProps) {
                 </ol>
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 mb-2 pl-2 border-l-2 border-blue-400">{lang === 'zh' ? '3. 在 Local Agent Terminal 中配置' : '3. Configure in Local Agent Terminal'}</h4>
+                <h4 className="font-semibold text-gray-900 mb-2 pl-2 border-l-2 border-blue-400">{lang === 'zh' ? '3. 在 点之出众 中配置' : '3. Configure in 点之出众'}</h4>
                 <ol className="list-decimal list-inside space-y-1 text-gray-600 ml-2">
                   <li>{lang === 'zh' ? '在「基础配置」Tab 中填入 Bot ID 和 Secret' : 'Enter Bot ID and Secret in "Basic Config" tab'}</li>
                   <li>{lang === 'zh' ? '点击「启动连接器」' : 'Click "Start Connector"'}</li>
@@ -837,8 +838,8 @@ export function ConnectorConfig({ onClose, onNavigate }: ConnectorConfigProps) {
           <div className="settings-alert settings-alert-info">
             <p className="text-sm text-blue-800">
               {lang === 'zh'
-                ? '💡 提示：每个机器人同一时间只能保持一个长连接。如需多个机器人，请在企微后台创建多个智能机器人，然后在 Local Agent Terminal 中分别配置。'
-                : '💡 Tip: Each bot can only maintain one WebSocket connection at a time. For multiple bots, create them in WeCom Admin and configure each in Local Agent Terminal.'}
+                ? '💡 提示：每个机器人同一时间只能保持一个长连接。如需多个机器人，请在企微后台创建多个智能机器人，然后在 点之出众 中分别配置。'
+                : '💡 Tip: Each bot can only maintain one WebSocket connection at a time. For multiple bots, create them in WeCom Admin and configure each in 点之出众.'}
             </p>
           </div>
         </div>
@@ -1272,7 +1273,7 @@ export function ConnectorConfig({ onClose, onNavigate }: ConnectorConfigProps) {
             </ol>
           </div>
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2 pl-2 border-l-2 border-blue-400">{lang === 'zh' ? '5. 在 Local Agent Terminal 中填入凭证并启动' : '5. Enter credentials in Local Agent Terminal and start'}</h4>
+            <h4 className="font-semibold text-gray-900 mb-2 pl-2 border-l-2 border-blue-400">{lang === 'zh' ? '5. 在 点之出众 中填入凭证并启动' : '5. Enter credentials in 点之出众 and start'}</h4>
           </div>
           <div>
             <h4 className="font-semibold text-gray-900 mb-2 pl-2 border-l-2 border-blue-400">{lang === 'zh' ? '6. 发布应用' : '6. Publish the App'}</h4>
@@ -1376,7 +1377,7 @@ export function ConnectorConfig({ onClose, onNavigate }: ConnectorConfigProps) {
                   placeholder={
                     lang === 'zh'
                       ? workPromptConnectorId === 'feishu'
-                        ? '例如：\n你是公司的AI助理，帮助员工处理日常工作：\n1. 协助撰写文档、邮件和报告\n2. 回答公司制度和流程相关问题\n3. 帮助整理会议纪要和待办事项'
+                        ? DEFAULT_FEISHU_WORK_PROMPT
                         : workPromptConnectorId === 'smart-kf'
                           ? '例如：\n你是AI客服，请注意以下几点：\n1. 回复要简洁友好，不超过200字\n2. 遇到技术问题，先询问具体情况再给建议\n3. 无法解决的问题，引导用户联系人工客服\n4. 回答前先读取 ~/knowledge-base/ 文件夹中的文档作为参考'
                           : '例如：\n你是公司的AI助理，帮助员工处理日常工作：\n1. 协助撰写文档、方案和总结\n2. 回答公司业务和流程相关问题\n3. 帮助分析数据和生成报表'

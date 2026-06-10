@@ -48,7 +48,7 @@ export function DocAnalysisToolConfig({ onClose }: DocAnalysisToolConfigProps) {
                 pip install markitdown -i https://mirrors.aliyun.com/pypi/simple
               </code>
               <br /><br />
-              或直接告诉 Local Agent Terminal：<code style={{ padding: '2px 6px', background: 'rgba(0,0,0,0.1)', borderRadius: '3px' }}>帮我安装 markitdown</code>
+              或直接告诉 点之出众：<code style={{ padding: '2px 6px', background: 'rgba(0,0,0,0.1)', borderRadius: '3px' }}>帮我安装 markitdown</code>
             </>
           ) : (
             <>
@@ -59,7 +59,7 @@ export function DocAnalysisToolConfig({ onClose }: DocAnalysisToolConfigProps) {
                 pip install markitdown -i https://mirrors.aliyun.com/pypi/simple
               </code>
               <br /><br />
-              Or tell Local Agent Terminal: <code style={{ padding: '2px 6px', background: 'rgba(0,0,0,0.1)', borderRadius: '3px' }}>Help me install markitdown</code>
+              Or tell 点之出众: <code style={{ padding: '2px 6px', background: 'rgba(0,0,0,0.1)', borderRadius: '3px' }}>Help me install markitdown</code>
             </>
           )}
         </div>

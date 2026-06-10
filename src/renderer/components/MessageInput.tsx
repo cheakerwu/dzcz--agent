@@ -530,7 +530,7 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
       <div className={`terminal-input-wrapper ${isSmartKfTab ? `wecom-reply-${wecomReplyMode}` : ''}`}>
         {/* 提示符 - 智能客服 Tab 不显示 */}
         {!isSmartKfTab && (
-          <div className="terminal-input-prompt">{userName}@deepbot:~$</div>
+          <div className="terminal-input-prompt">{userName}@dzcz:~$</div>
         )}
 
         {/* 智能客服 Tab 回复模式切换 */}
@@ -586,7 +586,7 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
               ? (wecomReplyMode === 'agent'
                 ? (lang === 'zh' ? '输入问题，Agent 回答后自动回复客户...' : 'Ask a question, Agent will reply to customer...')
                 : (lang === 'zh' ? '输入内容，直接发送给客户...' : 'Type message to send directly to customer...'))
-              : (lang === 'zh' ? '问我任何问题，或让我帮你完成任务...' : 'Ask me anything, or let me help with a task...')}
+              : (lang === 'zh' ? '输入内部任务、门店问题、脚本或飞书流程...' : 'Enter an internal task, store issue, script, or Feishu workflow...')}
             disabled={disabled}
             rows={1}
             className="terminal-input"

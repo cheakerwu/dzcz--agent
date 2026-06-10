@@ -46,7 +46,7 @@ export function BrowserToolConfig({ onClose: _onClose }: BrowserToolConfigProps)
         <p className="text-sm text-gray-600">
           {isDocker
             ? (lang === 'zh' ? 'Docker 模式下使用无头 Chromium 浏览器（Playwright），无需手动启动。' : 'Uses headless Chromium (Playwright) in Docker mode, no manual launch needed.')
-            : (lang === 'zh' ? 'Local Agent Terminal 使用 CDP（Chrome DevTools Protocol）连接到您手动启动的 Chrome 浏览器。' : 'Local Agent Terminal connects to your manually launched Chrome browser via CDP (Chrome DevTools Protocol).')}
+            : (lang === 'zh' ? '点之出众 使用 CDP（Chrome DevTools Protocol）连接到您手动启动的 Chrome 浏览器。' : '点之出众 connects to your manually launched Chrome browser via CDP (Chrome DevTools Protocol).')}
           {!isDocker && (
             <>
               {' '}

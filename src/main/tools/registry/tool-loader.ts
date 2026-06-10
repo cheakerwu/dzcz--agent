@@ -18,6 +18,7 @@ import { TOOL_NAMES } from '../tool-names';
 import { fileToolPlugin } from '../file-tool';
 import { execToolPlugin } from '../exec-tool';
 import { browserToolPlugin } from '../browser-tool';
+import { browserActToolPlugin } from '../browser-act-tool';
 import { calendarToolPlugin } from '../calendar-tool';
 import { skillManagerToolPlugin } from '../skill-manager';
 import { scheduledTaskToolPlugin } from '../scheduled-task-tool';
@@ -140,6 +141,11 @@ export class ToolLoader {
       // 浏览器工具
       if (isEnabled(TOOL_NAMES.BROWSER)) {
         tools.push(...await resolvePluginTools(browserToolPlugin.create(pluginOpts)));
+      }
+
+      // BrowserAct 工具（飞书入口下的隔离浏览器自动化）
+      if (isEnabled(TOOL_NAMES.BROWSER_ACT)) {
+        tools.push(...await resolvePluginTools(browserActToolPlugin.create(pluginOpts)));
       }
 
       // 日历工具

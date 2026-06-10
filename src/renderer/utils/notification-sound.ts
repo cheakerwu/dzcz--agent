@@ -25,7 +25,7 @@ function getAudioContext(): AudioContext | null {
 
 /**
  * 播放企微消息通知音效
- * 短促的双音电子提示音，符合 Local Agent Terminal 风格
+ * 短促的双音电子提示音，符合 点之出众 风格
  */
 export function playNotificationSound(): void {
   const ctx = getAudioContext();

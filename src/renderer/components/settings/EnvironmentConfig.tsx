@@ -265,7 +265,7 @@ export function EnvironmentConfig({ onClose, activeTabId }: EnvironmentConfigPro
           {lang === 'zh' ? '运行环境' : 'Runtime Environment'}
         </div>
         <p style={{ fontSize: '12px', color: 'var(--settings-text-dim)', marginBottom: '12px' }}>
-          {lang === 'zh' ? 'Local Agent Terminal 需要 Python 环境来执行脚本和 Skill。' : 'Local Agent Terminal requires Python to run scripts and Skills.'}
+          {lang === 'zh' ? '点之出众 需要 Python 环境来执行脚本和 Skill。' : '点之出众 requires Python to run scripts and Skills.'}
         </p>
 
         <div className="space-y-3">
@@ -349,7 +349,7 @@ export function EnvironmentConfig({ onClose, activeTabId }: EnvironmentConfigPro
                 status.allInstalled ? 'text-green-700' : 'text-yellow-700'
               }`}>
                 {status.allInstalled 
-                  ? (lang === 'zh' ? 'Local Agent Terminal 已准备就绪，可以正常使用所有功能。' : 'Local Agent Terminal is ready. All features are available.')
+                  ? (lang === 'zh' ? '点之出众 已准备就绪，可以正常使用所有功能。' : '点之出众 is ready. All features are available.')
                   : (lang === 'zh' ? 'Python 未安装，某些功能可能无法使用。请安装 Python。' : 'Python is not installed. Some features may not work. Please install Python.')
                 }
               </p>

@@ -337,8 +337,8 @@ export function WorkspaceConfig({ onClose }: WorkspaceConfigProps) {
         </h3>
         <p className="text-sm text-gray-500">
           {lang === 'zh'
-            ? '配置 Local Agent Terminal 的工作目录，所有文件操作将限制在工作目录及其子目录内'
-            : 'Configure Local Agent Terminal workspace directories. All file operations are restricted to the workspace directory and its subdirectories.'}
+            ? '配置 点之出众 的工作目录，所有文件操作将限制在工作目录及其子目录内'
+            : 'Configure 点之出众 workspace directories. All file operations are restricted to the workspace directory and its subdirectories.'}
         </p>
       </div>
 

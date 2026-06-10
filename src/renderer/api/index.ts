@@ -61,7 +61,7 @@ export const api = {
   async getTabAgentName(tabId: string): Promise<{ success: boolean; agentName: string; userName: string; error?: string }> {
     if (isElectron()) return (window as any).deepbot.getTabAgentName(tabId);
     const config = await webClient.getConfig();
-    return { success: true, agentName: config.names?.agentName || 'Local Agent', userName: config.names?.userName || '用户' };
+    return { success: true, agentName: config.names?.agentName || '点之出众', userName: config.names?.userName || '用户' };
   },
 
   // 应用设置（通用 key-value）

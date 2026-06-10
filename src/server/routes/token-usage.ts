@@ -38,7 +38,8 @@ export function createTokenUsageRouter(): Router {
    */
   const resetUsage: RequestHandler = async (req, res) => {
     try {
-      const { modelId } = req.params;
+      const rawModelId = req.params.modelId;
+      const modelId = Array.isArray(rawModelId) ? rawModelId[0] : rawModelId;
       if (!modelId) {
         res.status(400).json({ success: false, error: 'modelId 参数必填' });
         return;

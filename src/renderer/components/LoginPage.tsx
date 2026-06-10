@@ -63,7 +63,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           textAlign: 'center',
           letterSpacing: '1px',
         }}>
-          点之出众餐饮智能工作台
+          点之出众
         </h1>
         <p style={{
           fontSize: '13px',
@@ -71,7 +71,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           marginBottom: '28px',
           textAlign: 'center',
         }}>
-          餐饮运营 AI 助手 · 请输入访问密码
+          请输入内部访问密码
         </p>
         
         <form onSubmit={handleSubmit}>

@@ -220,7 +220,7 @@ const arePropsEqual = (
   return true;
 };
 
-export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, agentName = 'matrix', userName = 'user', isConnectorTab = false }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message, agentName = '点之出众', userName = 'user', isConnectorTab = false }) => {
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const [isAllExpanded, setIsAllExpanded] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -272,7 +272,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message
   let promptClass = '';
   
   if (isUser) {
-    prompt = `${userName}@deepbot:~$`;
+    prompt = `${userName}@dzcz:~$`;
     promptClass = 'user';
   } else if (isSystem) {
     prompt = '[SYSTEM]';
@@ -281,7 +281,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message
     prompt = '[TASK-COMPLETE]';
     promptClass = 'system';
   } else {
-    prompt = `${agentName}@deepbot:~>`;
+    prompt = `${agentName}@dzcz:~>`;
     promptClass = 'agent';
   }
 
