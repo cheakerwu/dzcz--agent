@@ -30,6 +30,7 @@ interface ChatWindowProps {
   onOpenSkillManager?: () => void;
   onOpenScheduledTaskManager?: () => void;
   onOpenSystemSettings?: () => void;
+  onOpenAdminConsole?: () => void;
   isLocked?: boolean;
   pendingPairingCount?: number; // 待授权用户数量
   // Tab 相关
@@ -49,6 +50,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = React.memo(({
   onOpenSkillManager,
   onOpenScheduledTaskManager,
   onOpenSystemSettings,
+  onOpenAdminConsole,
   isLocked = false,
   pendingPairingCount = 0,
   tabs,
@@ -665,6 +667,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = React.memo(({
               title={lang === 'zh' ? '定时任务' : 'Tasks'}
             >
               [TASKS]
+            </button>
+          )}
+
+          {onOpenAdminConsole && (
+            <button
+              onClick={onOpenAdminConsole}
+              className="terminal-control-button"
+              title={lang === 'zh' ? '运营管理后台' : 'Admin Console'}
+            >
+              [ADMIN]
             </button>
           )}
           

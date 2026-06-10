@@ -7,6 +7,20 @@ import { isElectron } from '../utils/platform';
 import { webClient } from './web-client';
 import type { AgentTab } from '../../types/agent-tab';
 import type { Message } from '../../types/message';
+import type {
+  AdminActionRequest,
+  BindConversationToStoreInput,
+  CreateBrowserProfileInput,
+  CreateMemoryItemInput,
+  CreateStoreInput,
+  GrantBrowserProfilePermissionInput,
+  ListAuditEventsFilter,
+  ListMemoryItemsFilter,
+  MemoryStatus,
+  UpsertEmployeeInput,
+  UpsertFeishuConversationInput,
+  AssignEmployeeToStoreInput,
+} from '../../types/admin-control-plane';
 
 // Web 模式的事件监听器存储
 const webEventListeners = new Map<string, Set<Function>>();
@@ -16,6 +30,13 @@ let wsInstance: WebSocket | null = null;
 
 // 已订阅的 Tab 集合，避免重复订阅
 const subscribedTabs = new Set<string>();
+
+function unwrapAdminData<T = any>(result: any): T {
+  if (!result?.success) {
+    throw new Error(result?.error || '管理后台请求失败');
+  }
+  return result.data as T;
+}
 
 export const api = {
   // ==================== 认证 ====================
@@ -76,6 +97,89 @@ export const api = {
       const result = await webClient.get(`/api/config/app-setting?key=${encodeURIComponent(key)}`);
       return { success: true, value: result?.value ?? null };
     } catch { return { success: true, value: null }; }
+  },
+
+  // ==================== 管理后台控制平面 ====================
+
+  async adminControlPlane(request: AdminActionRequest): Promise<any> {
+    if (isElectron()) return (window as any).deepbot.adminControlPlane(request);
+    return webClient.post('/api/admin-control-plane', request);
+  },
+
+  async adminGetDashboard(): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'dashboard.get' }));
+  },
+
+  async adminListStores(): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'stores.list' }));
+  },
+
+  async adminCreateStore(input: CreateStoreInput): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'stores.create', payload: { input, actorId: 'admin-console' } }));
+  },
+
+  async adminUpdateStore(id: string, input: Partial<CreateStoreInput>): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'stores.update', payload: { id, input, actorId: 'admin-console' } }));
+  },
+
+  async adminListEmployees(): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'employees.list' }));
+  },
+
+  async adminUpsertEmployee(input: UpsertEmployeeInput): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'employees.upsert', payload: { input, actorId: 'admin-console' } }));
+  },
+
+  async adminOffboardEmployee(employeeId: string): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'employees.offboard', payload: { employeeId, actorId: 'admin-console' } }));
+  },
+
+  async adminListFeishuConversations(): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'conversations.list' }));
+  },
+
+  async adminUpsertFeishuConversation(input: UpsertFeishuConversationInput): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'conversations.upsert', payload: { input, actorId: 'admin-console' } }));
+  },
+
+  async adminBindConversationToStore(input: BindConversationToStoreInput): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'conversationStoreBindings.create', payload: { input, actorId: 'admin-console' } }));
+  },
+
+  async adminAssignEmployeeToStore(input: AssignEmployeeToStoreInput): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'storeAssignments.create', payload: { input, actorId: 'admin-console' } }));
+  },
+
+  async adminListMemoryItems(filter?: ListMemoryItemsFilter): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'memories.list', payload: { filter: filter || {} } }));
+  },
+
+  async adminCreateMemoryItem(input: CreateMemoryItemInput): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'memories.create', payload: { input, actorId: 'admin-console' } }));
+  },
+
+  async adminUpdateMemoryStatus(id: string, status: MemoryStatus): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'memories.updateStatus', payload: { id, status, actorId: 'admin-console' } }));
+  },
+
+  async adminSyncMemoryItem(memoryId: string): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'memories.sync', payload: { memoryId, actorId: 'admin-console' } }));
+  },
+
+  async adminListBrowserProfiles(): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'browserProfiles.list' }));
+  },
+
+  async adminCreateBrowserProfile(input: CreateBrowserProfileInput): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'browserProfiles.create', payload: { input, actorId: 'admin-console' } }));
+  },
+
+  async adminGrantBrowserProfilePermission(input: GrantBrowserProfilePermissionInput): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'browserProfilePermissions.grant', payload: { input, actorId: 'admin-console' } }));
+  },
+
+  async adminListAuditEvents(filter?: ListAuditEventsFilter): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'auditEvents.list', payload: { filter: filter || {} } }));
   },
 
   // ==================== 系统设置 ====================

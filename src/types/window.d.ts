@@ -9,6 +9,7 @@ interface DeepBotAPI {
   getSubAgents: (sessionId?: string) => Promise<any>;
   cancelSubAgent: (subAgentId: string) => Promise<any>;
   skillManager: (request: any) => Promise<any>;
+  adminControlPlane: (request: import('./admin-control-plane').AdminActionRequest) => Promise<any>;
   scheduledTask: (request: any) => Promise<any>;
   checkEnvironment: (action: 'check' | 'get_status') => Promise<any>;
   getWorkspaceSettings: () => Promise<any>;

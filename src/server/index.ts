@@ -28,6 +28,7 @@ import { createTokenUsageRouter } from './routes/token-usage';
 import { createImageUsageRouter } from './routes/image-usage';
 import { createModelProviderRoutingRouter } from './routes/model-provider-routing';
 import { createExternalRouter } from './routes/external';
+import { createAdminControlPlaneRouter } from './routes/admin-control-plane';
 import { TIMEOUTS } from '../main/config/timeouts';
 
 // 读取环境变量
@@ -100,6 +101,7 @@ async function main(): Promise<void> {
   app.use('/api/token-usage', authMiddleware, createTokenUsageRouter());
   app.use('/api/image-usage', authMiddleware, createImageUsageRouter());
   app.use('/api/model-provider-routing', authMiddleware, createModelProviderRoutingRouter());
+  app.use('/api/admin-control-plane', authMiddleware, createAdminControlPlaneRouter());
   
   // 外部调用 API（使用 X-Secret 认证，不走 JWT Token）
   app.use('/api/external', createExternalRouter(gatewayAdapter));

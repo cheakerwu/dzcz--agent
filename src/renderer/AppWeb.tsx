@@ -10,6 +10,7 @@ import { ChatWindow } from './components/ChatWindow';
 import { SkillManager } from './components/SkillManager';
 import { ScheduledTaskManager } from './components/ScheduledTaskManager';
 import { SystemSettings } from './components/SystemSettings';
+import { AdminConsole } from './components/AdminConsole';
 import { LoginPage } from './components/LoginPage';
 import { Message } from '../types/message';
 import type { AgentTab } from '../types/agent-tab';
@@ -47,6 +48,7 @@ export function AppWeb() {
   const [isSkillManagerOpen, setIsSkillManagerOpen] = useState(false);
   const [isScheduledTaskManagerOpen, setIsScheduledTaskManagerOpen] = useState(false);
   const [isSystemSettingsOpen, setIsSystemSettingsOpen] = useState(false);
+  const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState(false);
   const [hasModelConfig, setHasModelConfig] = useState(true);
   const [pendingPairingCount, setPendingPairingCount] = useState(0);
   const [isKicked, setIsKicked] = useState(false);
@@ -760,6 +762,7 @@ export function AppWeb() {
         onOpenSkillManager={() => setIsSkillManagerOpen(true)}
         onOpenScheduledTaskManager={() => setIsScheduledTaskManagerOpen(true)}
         onOpenSystemSettings={() => setIsSystemSettingsOpen(true)}
+        onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
         tabs={tabs}
         activeTabId={activeTabId}
         onTabClick={handleSwitchTab}
@@ -787,6 +790,11 @@ export function AppWeb() {
           // 关闭设置面板后重新检查模型配置（首次配置场景）
           checkModelConfig();
         }}
+      />
+
+      <AdminConsole
+        isOpen={isAdminConsoleOpen}
+        onClose={() => setIsAdminConsoleOpen(false)}
       />
 
       {/* 被踢出遮罩层 */}

@@ -25,6 +25,9 @@ export const IPC_CHANNELS = {
   // Skill 管理器
   SKILL_MANAGER: 'skill-manager',
   INVALIDATE_SYSTEM_PROMPTS: 'system-prompt:invalidate',
+
+  // 管理后台控制平面
+  ADMIN_CONTROL_PLANE_REQUEST: 'admin-control-plane:request',
   
   // 定时任务管理
   SCHEDULED_TASK: 'scheduled-task',

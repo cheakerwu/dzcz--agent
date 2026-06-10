@@ -14,6 +14,7 @@ import { buildTimeSection } from './sections/time';
 import { buildContextSection } from './sections/context';
 import { buildRuntimeSection } from './sections/runtime';
 import { getMemoryContent } from '../tools/memory-tool';
+import { buildAdminMemoryPromptContextForSession } from '../admin-control-plane/prompt-context';
 import { listInstalledSkills } from '../tools/skill-manager/manage';
 import { initDatabase } from '../tools/skill-manager/database';
 
@@ -78,6 +79,23 @@ export async function buildSystemPrompt(params: SystemPromptParams, sessionId?: 
     }
   } catch (error) {
     console.warn('⚠️ 加载核心记忆失败:', error);
+  }
+
+  // 6. 结构化运营记忆（从管理后台控制平面按会话/门店范围加载）
+  try {
+    const adminMemoryContext = buildAdminMemoryPromptContextForSession(sessionId);
+    if (adminMemoryContext.trim().length > 0) {
+      lines.push(
+        '## 运营记忆控制平面',
+        '',
+        '**范围约束**：以下内容来自管理员维护的结构化门店、群聊、员工、记忆和浏览器登录态引用。只在当前会话和绑定门店范围内使用：',
+        '',
+        adminMemoryContext,
+        ''
+      );
+    }
+  } catch (error) {
+    console.warn('⚠️ 加载运营记忆控制平面失败:', error);
   }
 
   // 5. 额外提示（动态注入点）

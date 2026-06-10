@@ -23,6 +23,7 @@ const IPC_CHANNELS = {
   TASKS_CLEARED: 'task-monitor:tasks-cleared',
   SKILL_MANAGER: 'skill-manager',
   INVALIDATE_SYSTEM_PROMPTS: 'system-prompt:invalidate',
+  ADMIN_CONTROL_PLANE_REQUEST: 'admin-control-plane:request',
   SCHEDULED_TASK: 'scheduled-task',
   ENVIRONMENT_CHECK: 'environment-check',
   GET_WORKSPACE_SETTINGS: 'workspace:get-settings',
@@ -131,6 +132,10 @@ contextBridge.exposeInMainWorld('deepbot', {
     return ipcRenderer.invoke(IPC_CHANNELS.SKILL_MANAGER, request);
   },
 
+  adminControlPlane: (request: any) => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ADMIN_CONTROL_PLANE_REQUEST, request);
+  },
+  
   // 标记系统提示词需要重建
   invalidateSystemPrompts: () => {
     return ipcRenderer.invoke(IPC_CHANNELS.INVALIDATE_SYSTEM_PROMPTS);
