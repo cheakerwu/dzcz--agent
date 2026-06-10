@@ -1,5 +1,11 @@
 import type Database from '../../shared/utils/sqlite-adapter';
 
+function ensureColumn(db: Database.Database, tableName: string, columnName: string, definition: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+  if (columns.some((column) => column.name === columnName)) return;
+  db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${definition}`);
+}
+
 export function initAdminControlPlaneTables(db: Database.Database): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS stores (
@@ -81,6 +87,31 @@ export function initAdminControlPlaneTables(db: Database.Database): void {
       store_id TEXT,
       account_ref TEXT,
       status TEXT NOT NULL DEFAULT 'active',
+      risk_account_class TEXT NOT NULL DEFAULT 'standard',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `);
+  ensureColumn(db, 'platform_accounts', 'risk_account_class', `risk_account_class TEXT NOT NULL DEFAULT 'standard'`);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS browser_login_requests (
+      id TEXT PRIMARY KEY,
+      connector_id TEXT NOT NULL,
+      requester_user_id TEXT NOT NULL,
+      requester_open_id TEXT,
+      employee_id TEXT,
+      store_id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      platform_account_id TEXT,
+      browser_profile_id TEXT,
+      browser_act_browser_id TEXT,
+      session_name TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL,
+      login_url TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      verified_at INTEGER,
+      failed_reason TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     )
@@ -239,6 +270,9 @@ export function initAdminControlPlaneTables(db: Database.Database): void {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_store_assignments_employee ON store_assignments(employee_id, status)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_conversation_store_bindings_conversation ON conversation_store_bindings(conversation_id, status)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_conversation_store_bindings_store ON conversation_store_bindings(store_id, status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_platform_accounts_store ON platform_accounts(store_id, status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_browser_login_requests_requester ON browser_login_requests(connector_id, requester_user_id, status, expires_at)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_browser_login_requests_store ON browser_login_requests(store_id, status, expires_at)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_browser_profiles_store ON browser_profiles(store_id, status)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_memory_items_status_scope ON memory_items(status, scope)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_memory_entity_links_entity ON memory_entity_links(entity_type, entity_id)`);

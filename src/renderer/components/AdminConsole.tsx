@@ -17,16 +17,20 @@ import {
 import { api } from '../api';
 import type {
   AdminAuditEvent,
+  AdminBrowserActBrowser,
   AdminBrowserProfile,
   AdminDashboard,
   AdminEmployee,
   AdminFeishuConversation,
   AdminMemoryItem,
+  AdminPlatformAccount,
   AdminStore,
   BrowserActionLevel,
+  BrowserLoginRequest,
   BrowserProfileStatus,
   MemoryScope,
   MemoryStatus,
+  RiskAccountClass,
   RiskLevel,
 } from '../../types/admin-control-plane';
 import '../styles/admin-console.css';
@@ -73,6 +77,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
   const [conversations, setConversations] = useState<AdminFeishuConversation[]>([]);
   const [memories, setMemories] = useState<AdminMemoryItem[]>([]);
   const [browserProfiles, setBrowserProfiles] = useState<AdminBrowserProfile[]>([]);
+  const [platformAccounts, setPlatformAccounts] = useState<AdminPlatformAccount[]>([]);
+  const [browserLoginRequests, setBrowserLoginRequests] = useState<BrowserLoginRequest[]>([]);
+  const [browserActBrowsers, setBrowserActBrowsers] = useState<AdminBrowserActBrowser[]>([]);
   const [auditEvents, setAuditEvents] = useState<AdminAuditEvent[]>([]);
 
   const [storeForm, setStoreForm] = useState({ name: '', brand: '点之出众', city: '', area: '' });
@@ -98,6 +105,21 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
     riskLevel: 'medium' as RiskLevel,
     allowedActionLevel: 'read_only' as BrowserActionLevel,
   });
+  const [browserActImportForm, setBrowserActImportForm] = useState({
+    platform: 'meituan',
+    label: '',
+    storeId: '',
+    browserActBrowserId: '',
+    riskLevel: 'high' as RiskLevel,
+    allowedActionLevel: 'high_risk_write' as BrowserActionLevel,
+  });
+  const [platformAccountForm, setPlatformAccountForm] = useState({
+    platform: 'meituan',
+    label: '',
+    storeId: '',
+    accountRef: '',
+    riskAccountClass: 'high_risk' as RiskAccountClass,
+  });
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -110,6 +132,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
         nextConversations,
         nextMemories,
         nextBrowserProfiles,
+        nextPlatformAccounts,
+        nextBrowserLoginRequests,
+        nextBrowserActBrowsers,
         nextAuditEvents,
       ] = await Promise.all([
         api.adminGetDashboard(),
@@ -118,6 +143,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
         api.adminListFeishuConversations(),
         api.adminListMemoryItems(),
         api.adminListBrowserProfiles(),
+        api.adminListPlatformAccounts(),
+        api.adminListBrowserLoginRequests(),
+        api.adminListBrowserActBrowsers().catch(() => []),
         api.adminListAuditEvents({ limit: 80 }),
       ]);
       setDashboard(nextDashboard);
@@ -126,6 +154,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
       setConversations(nextConversations);
       setMemories(nextMemories);
       setBrowserProfiles(nextBrowserProfiles);
+      setPlatformAccounts(nextPlatformAccounts);
+      setBrowserLoginRequests(nextBrowserLoginRequests);
+      setBrowserActBrowsers(nextBrowserActBrowsers);
       setAuditEvents(nextAuditEvents);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
@@ -230,7 +261,63 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
     await loadData();
   };
 
+  const submitBrowserActImport = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!browserActImportForm.browserActBrowserId || !browserActImportForm.storeId) return;
+    await api.adminImportBrowserActProfile({
+      platform: browserActImportForm.platform,
+      label: browserActImportForm.label,
+      storeId: browserActImportForm.storeId,
+      browserActBrowserId: browserActImportForm.browserActBrowserId,
+      riskLevel: browserActImportForm.riskLevel,
+      allowedActionLevel: browserActImportForm.allowedActionLevel,
+    });
+    setBrowserActImportForm((prev) => ({ ...prev, label: '', browserActBrowserId: '' }));
+    await loadData();
+  };
+
+  const submitPlatformAccount = async (event: React.FormEvent) => {
+    event.preventDefault();
+    await api.adminCreatePlatformAccount({
+      platform: platformAccountForm.platform,
+      label: platformAccountForm.label,
+      storeId: platformAccountForm.storeId || undefined,
+      accountRef: platformAccountForm.accountRef || undefined,
+      status: 'active',
+      riskAccountClass: platformAccountForm.riskAccountClass,
+    });
+    setPlatformAccountForm((prev) => ({ ...prev, label: '', accountRef: '' }));
+    await loadData();
+  };
+
+  const expireLoginRequests = async () => {
+    await api.adminExpireBrowserLoginRequests();
+    await loadData();
+  };
+
   const getStoreName = (storeId?: string) => stores.find((store) => store.id === storeId)?.name || '未绑定门店';
+  const formatDateTime = (value?: number) => value ? new Date(value).toLocaleString() : '-';
+  const getBrowserActId = (profile: AdminBrowserProfile) => (
+    profile.storageStateRef?.startsWith('browser-act:')
+      ? profile.storageStateRef.replace('browser-act:', '')
+      : '-'
+  );
+  const riskClassFromProfile = (profile: AdminBrowserProfile): RiskAccountClass => {
+    const account = platformAccounts.find((item) =>
+      item.platform === profile.platform && (!item.storeId || !profile.storeId || item.storeId === profile.storeId)
+    );
+    if (account) return account.riskAccountClass;
+    if (profile.riskLevel === 'critical') return 'critical';
+    if (profile.riskLevel === 'high') return 'high_risk';
+    if (profile.riskLevel === 'medium') return 'sensitive';
+    return 'standard';
+  };
+  const getLatestLoginForProfile = (profile: AdminBrowserProfile) => (
+    browserLoginRequests.find((request) =>
+      request.browserProfileId === profile.id ||
+      (request.platform === profile.platform && request.storeId === profile.storeId)
+    )
+  );
 
   return (
     <div className="admin-console-overlay">
@@ -438,7 +525,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
 
             {section === 'browser-vault' && (
               <section className="admin-section">
-                <AdminForm onSubmit={submitBrowserProfile}>
+                <AdminForm onSubmit={submitBrowserProfile} className="admin-form-browser">
                   <input value={browserForm.platform} onChange={(e) => setBrowserForm({ ...browserForm, platform: e.target.value })} placeholder="平台" required />
                   <input value={browserForm.label} onChange={(e) => setBrowserForm({ ...browserForm, label: e.target.value })} placeholder="登录态标签" required />
                   <select value={browserForm.storeId} onChange={(e) => setBrowserForm({ ...browserForm, storeId: e.target.value })}>
@@ -447,22 +534,117 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
                   </select>
                   <input value={browserForm.storageStateRef} onChange={(e) => setBrowserForm({ ...browserForm, storageStateRef: e.target.value })} placeholder="storage-state 引用" />
                   <select value={browserForm.riskLevel} onChange={(e) => setBrowserForm({ ...browserForm, riskLevel: e.target.value as RiskLevel })}>
-                    <option value="low">low</option>
-                    <option value="medium">medium</option>
-                    <option value="high">high</option>
-                    <option value="critical">critical</option>
+                    <option value="low">低</option>
+                    <option value="medium">中</option>
+                    <option value="high">高</option>
+                    <option value="critical">关键</option>
+                  </select>
+                  <select value={browserForm.allowedActionLevel} onChange={(e) => setBrowserForm({ ...browserForm, allowedActionLevel: e.target.value as BrowserActionLevel })}>
+                    <option value="read_only">只读</option>
+                    <option value="low_risk_write">低风险写</option>
+                    <option value="medium_risk_write">中风险写</option>
+                    <option value="high_risk_write">高风险写</option>
+                    <option value="destructive">破坏性</option>
                   </select>
                   <button type="submit">登记登录态</button>
                 </AdminForm>
-                <DataTable headers={['标签', '平台', '门店', '状态', '风险', '凭据']}>
+
+                <AdminForm onSubmit={submitBrowserActImport} className="admin-form-browser">
+                  <input value={browserActImportForm.platform} onChange={(e) => setBrowserActImportForm({ ...browserActImportForm, platform: e.target.value })} placeholder="平台" required />
+                  <input value={browserActImportForm.label} onChange={(e) => setBrowserActImportForm({ ...browserActImportForm, label: e.target.value })} placeholder="导入标签" required />
+                  <select value={browserActImportForm.storeId} onChange={(e) => setBrowserActImportForm({ ...browserActImportForm, storeId: e.target.value })} required>
+                    <option value="">绑定门店</option>
+                    {storeOptions}
+                  </select>
+                  <select value={browserActImportForm.browserActBrowserId} onChange={(e) => setBrowserActImportForm({ ...browserActImportForm, browserActBrowserId: e.target.value })} required>
+                    <option value="">BrowserAct 浏览器</option>
+                    {browserActBrowsers.map((browser) => (
+                      <option key={browser.id} value={browser.id}>{browser.name || browser.id}</option>
+                    ))}
+                  </select>
+                  <select value={browserActImportForm.allowedActionLevel} onChange={(e) => setBrowserActImportForm({ ...browserActImportForm, allowedActionLevel: e.target.value as BrowserActionLevel })}>
+                    <option value="read_only">只读</option>
+                    <option value="low_risk_write">低风险写</option>
+                    <option value="medium_risk_write">中风险写</option>
+                    <option value="high_risk_write">高风险写</option>
+                    <option value="destructive">破坏性</option>
+                  </select>
+                  <button type="submit">导入 BrowserAct</button>
+                </AdminForm>
+
+                <div className="admin-toolbar-line">
+                  <button className="admin-row-button" onClick={expireLoginRequests}><RefreshCw size={14} />过期扫描</button>
+                </div>
+
+                <h3 className="admin-section-title">平台账号风险</h3>
+                <AdminForm onSubmit={submitPlatformAccount} className="admin-form-browser">
+                  <input value={platformAccountForm.platform} onChange={(e) => setPlatformAccountForm({ ...platformAccountForm, platform: e.target.value })} placeholder="平台" required />
+                  <input value={platformAccountForm.label} onChange={(e) => setPlatformAccountForm({ ...platformAccountForm, label: e.target.value })} placeholder="平台账号标签" required />
+                  <select value={platformAccountForm.storeId} onChange={(e) => setPlatformAccountForm({ ...platformAccountForm, storeId: e.target.value })}>
+                    <option value="">绑定门店</option>
+                    {storeOptions}
+                  </select>
+                  <input value={platformAccountForm.accountRef} onChange={(e) => setPlatformAccountForm({ ...platformAccountForm, accountRef: e.target.value })} placeholder="账号引用" />
+                  <select value={platformAccountForm.riskAccountClass} onChange={(e) => setPlatformAccountForm({ ...platformAccountForm, riskAccountClass: e.target.value as RiskAccountClass })}>
+                    <option value="standard">标准</option>
+                    <option value="sensitive">敏感</option>
+                    <option value="high_risk">高风险</option>
+                    <option value="critical">关键</option>
+                  </select>
+                  <button type="submit">登记平台账号</button>
+                </AdminForm>
+                <DataTable headers={['账号', '平台', '门店', '状态', '风险账号等级', '账号引用']}>
+                  {platformAccounts.map((account) => (
+                    <tr key={account.id}>
+                      <td>{account.label}</td>
+                      <td>{account.platform}</td>
+                      <td>{getStoreName(account.storeId)}</td>
+                      <td><StatusPill label={account.status} /></td>
+                      <td><RiskPill label={account.riskAccountClass} /></td>
+                      <td>{account.accountRef || '-'}</td>
+                    </tr>
+                  ))}
+                </DataTable>
+
+                <h3 className="admin-section-title">浏览器登录态</h3>
+                <DataTable headers={['标签', '平台', '门店', 'BrowserAct ID', '风险账号等级', '最高动作', '最近验证', '登录请求状态', '10 分钟过期时间']}>
                   {browserProfiles.map((profile) => (
-                    <tr key={profile.id}>
-                      <td>{profile.label}</td>
-                      <td>{profile.platform}</td>
-                      <td>{getStoreName(profile.storeId)}</td>
-                      <td><StatusPill label={profile.status} /></td>
-                      <td>{profile.riskLevel}</td>
-                      <td>{profile.storageStateRef ? '已登记，提示词不可见' : '未登记'}</td>
+                    <BrowserProfileRow
+                      key={profile.id}
+                      profile={profile}
+                      storeName={getStoreName(profile.storeId)}
+                      browserActId={getBrowserActId(profile)}
+                      riskAccountClass={riskClassFromProfile(profile)}
+                      loginRequest={getLatestLoginForProfile(profile)}
+                      formatDateTime={formatDateTime}
+                    />
+                  ))}
+                </DataTable>
+
+                <h3 className="admin-section-title">登录请求</h3>
+                <DataTable headers={['登录码', '平台', '门店', '员工', '状态', '10 分钟过期时间', '远程协助']}>
+                  {browserLoginRequests.map((request) => (
+                    <tr key={request.id}>
+                      <td>{request.id}</td>
+                      <td>{request.platform}</td>
+                      <td>{getStoreName(request.storeId)}</td>
+                      <td>{request.employeeId || request.requesterUserId}</td>
+                      <td><StatusPill label={request.status} /></td>
+                      <td>{formatDateTime(request.expiresAt)}</td>
+                      <td>{['pending_confirmation', 'creating_browser', 'waiting_employee_login', 'verifying'].includes(request.status) ? '已私发给员工' : '-'}</td>
+                    </tr>
+                  ))}
+                </DataTable>
+
+                <h3 className="admin-section-title">BrowserAct 浏览器</h3>
+                <DataTable headers={['BrowserAct ID', '名称', '类型', '状态', '说明']}>
+                  {browserActBrowsers.map((browser) => (
+                    <tr key={browser.id}>
+                      <td>{browser.id}</td>
+                      <td>{browser.name}</td>
+                      <td>{browser.type}</td>
+                      <td>{browser.state || '-'}</td>
+                      <td>{browser.desc || '-'}</td>
                     </tr>
                   ))}
                 </DataTable>
@@ -528,6 +710,31 @@ const DataTable: React.FC<{ headers: string[]; children: React.ReactNode }> = ({
   </div>
 );
 
+const BrowserProfileRow: React.FC<{
+  profile: AdminBrowserProfile;
+  storeName: string;
+  browserActId: string;
+  riskAccountClass: RiskAccountClass;
+  loginRequest?: BrowserLoginRequest;
+  formatDateTime: (value?: number) => string;
+}> = ({ profile, storeName, browserActId, riskAccountClass, loginRequest, formatDateTime }) => (
+  <tr>
+    <td>{profile.label}</td>
+    <td>{profile.platform}</td>
+    <td>{storeName}</td>
+    <td>{browserActId}</td>
+    <td><RiskPill label={riskAccountClass} /></td>
+    <td>{profile.allowedActionLevel}</td>
+    <td>{formatDateTime(profile.lastSuccessfulUseAt || profile.lastCheckedAt)}</td>
+    <td>{loginRequest ? <StatusPill label={loginRequest.status} /> : '-'}</td>
+    <td>{loginRequest ? formatDateTime(loginRequest.expiresAt) : '-'}</td>
+  </tr>
+);
+
 const StatusPill: React.FC<{ label: string }> = ({ label }) => (
   <span className={`admin-status admin-status-${label.replace(/_/g, '-')}`}>{label}</span>
+);
+
+const RiskPill: React.FC<{ label: RiskAccountClass }> = ({ label }) => (
+  <span className={`admin-risk admin-risk-${label}`}>{label}</span>
 );

@@ -66,6 +66,15 @@ test('prompt context excludes browser secrets and only includes active scoped me
       riskLevel: 'high',
       allowedActionLevel: 'read_only',
     }, 'admin');
+    service.upsertBrowserProfileFromBrowserAct({
+      platform: 'meituan',
+      label: '万达美团远程协助登录态',
+      storeId: store.id,
+      browserActBrowserId: 'chrome_local_1',
+      riskLevel: 'high',
+      allowedActionLevel: 'high_risk_write',
+      lastSuccessfulUseAt: Date.now(),
+    }, 'admin');
 
     const context = service.buildPromptContextForConnectorSession({
       connectorId: 'feishu',
@@ -74,6 +83,9 @@ test('prompt context excludes browser secrets and only includes active scoped me
     assert.match(context, /万达店周三主推套餐 A/);
     assert.doesNotMatch(context, /归档记忆/);
     assert.doesNotMatch(context, /token=abc123/);
+    assert.match(context, /最高动作:high_risk_write/);
+    assert.doesNotMatch(context, /chrome_local_1/);
+    assert.doesNotMatch(context, /browser-act:/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

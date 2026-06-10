@@ -8,25 +8,33 @@ import type {
   AdminEmployee,
   AdminFeishuConversation,
   AdminMemoryItem,
+  AdminPlatformAccount,
   AdminProviderSyncState,
   AdminStore,
   AssignmentStatus,
   AssignEmployeeToStoreInput,
   BindConversationToStoreInput,
   BrowserActionLevel,
+  BrowserLoginRequest,
+  BrowserLoginRequestStatus,
   BrowserProfilePermission,
   ConversationStoreBinding,
+  CreateBrowserLoginRequestInput,
   CreateBrowserProfileInput,
   CreateMemoryItemInput,
+  CreatePlatformAccountInput,
   CreateStoreInput,
   GrantBrowserProfilePermissionInput,
   ListAuditEventsFilter,
+  ListBrowserLoginRequestsFilter,
   ListMemoryItemsFilter,
   MemoryEntityLinkInput,
   MemoryStatus,
   ProviderSyncStatus,
+  RiskAccountClass,
   RiskLevel,
   StoreAssignment,
+  UpsertBrowserProfileFromBrowserActInput,
   UpsertEmployeeInput,
   UpsertFeishuConversationInput,
 } from '../../types/admin-control-plane';
@@ -46,6 +54,12 @@ function createId(prefix: string): string {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function riskLevelForAccountClass(riskAccountClass: RiskAccountClass): RiskLevel {
+  if (riskAccountClass === 'critical' || riskAccountClass === 'high_risk') return 'high';
+  if (riskAccountClass === 'sensitive') return 'medium';
+  return 'low';
 }
 
 function mapStore(row: Row): AdminStore {
@@ -120,6 +134,20 @@ function mapBinding(row: Row): ConversationStoreBinding {
   };
 }
 
+function mapPlatformAccount(row: Row): AdminPlatformAccount {
+  return {
+    id: row.id,
+    platform: row.platform,
+    label: row.label,
+    storeId: optionalString(row.store_id),
+    accountRef: optionalString(row.account_ref),
+    status: row.status,
+    riskAccountClass: row.risk_account_class || 'standard',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 function mapBrowserProfile(row: Row): AdminBrowserProfile {
   return {
     id: row.id,
@@ -133,6 +161,29 @@ function mapBrowserProfile(row: Row): AdminBrowserProfile {
     allowedActionLevel: row.allowed_action_level,
     lastCheckedAt: row.last_checked_at ?? undefined,
     lastSuccessfulUseAt: row.last_successful_use_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapBrowserLoginRequest(row: Row): BrowserLoginRequest {
+  return {
+    id: row.id,
+    connectorId: row.connector_id,
+    requesterUserId: row.requester_user_id,
+    requesterOpenId: optionalString(row.requester_open_id),
+    employeeId: optionalString(row.employee_id),
+    storeId: row.store_id,
+    platform: row.platform,
+    platformAccountId: optionalString(row.platform_account_id),
+    browserProfileId: optionalString(row.browser_profile_id),
+    browserActBrowserId: optionalString(row.browser_act_browser_id),
+    sessionName: row.session_name,
+    status: row.status,
+    loginUrl: row.login_url,
+    expiresAt: row.expires_at,
+    verifiedAt: row.verified_at ?? undefined,
+    failedReason: optionalString(row.failed_reason),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -512,6 +563,208 @@ export class AdminControlPlaneService {
     return this.getMemoryItem(id);
   }
 
+  createPlatformAccount(input: CreatePlatformAccountInput, actorId = 'system'): AdminPlatformAccount {
+    this.ensureSchema();
+    const timestamp = now();
+    const id = createId('pacc');
+    const riskAccountClass = input.riskAccountClass || 'standard';
+    this.db.prepare(`
+      INSERT INTO platform_accounts (
+        id, platform, label, store_id, account_ref, status, risk_account_class, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      input.platform,
+      input.label,
+      input.storeId ?? null,
+      input.accountRef ?? null,
+      input.status || 'active',
+      riskAccountClass,
+      timestamp,
+      timestamp
+    );
+    this.recordAuditEvent(actorId, 'platform_account.created', 'platform_account', id, {
+      platform: input.platform,
+      label: input.label,
+      storeId: input.storeId,
+      riskAccountClass,
+    }, riskLevelForAccountClass(riskAccountClass));
+    return this.getPlatformAccount(id);
+  }
+
+  listPlatformAccounts(): AdminPlatformAccount[] {
+    this.ensureSchema();
+    return (this.db.prepare(`SELECT * FROM platform_accounts ORDER BY updated_at DESC`).all() as Row[]).map(mapPlatformAccount);
+  }
+
+  createBrowserLoginRequest(input: CreateBrowserLoginRequestInput, actorId = 'system'): BrowserLoginRequest {
+    this.ensureSchema();
+    const timestamp = now();
+    const id = createId('loginreq');
+    const expiresAt = timestamp + 10 * 60 * 1000;
+    const sessionName = `login_${id}`;
+    this.db.prepare(`
+      INSERT INTO browser_login_requests (
+        id, connector_id, requester_user_id, requester_open_id, employee_id, store_id, platform,
+        platform_account_id, browser_profile_id, browser_act_browser_id, session_name, status,
+        login_url, expires_at, verified_at, failed_reason, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      input.connectorId,
+      input.requesterUserId,
+      input.requesterOpenId ?? null,
+      input.employeeId ?? null,
+      input.storeId,
+      input.platform,
+      input.platformAccountId ?? null,
+      null,
+      null,
+      sessionName,
+      'pending_confirmation',
+      input.loginUrl,
+      expiresAt,
+      null,
+      null,
+      timestamp,
+      timestamp
+    );
+    this.recordAuditEvent(actorId, 'browser_login_request.created', 'login_request', id, {
+      connectorId: input.connectorId,
+      requesterUserId: input.requesterUserId,
+      storeId: input.storeId,
+      platform: input.platform,
+      expiresAt,
+    }, 'medium');
+    return this.getBrowserLoginRequest(id);
+  }
+
+  markBrowserLoginRequestWaiting(id: string, browserActBrowserId: string, actorId = 'system'): BrowserLoginRequest {
+    return this.updateBrowserLoginRequestStatus(id, 'waiting_employee_login', {
+      browser_act_browser_id: browserActBrowserId,
+      failed_reason: null,
+    }, actorId);
+  }
+
+  markBrowserLoginRequestHealthy(id: string, browserProfileId: string, actorId = 'system'): BrowserLoginRequest {
+    return this.updateBrowserLoginRequestStatus(id, 'healthy', {
+      browser_profile_id: browserProfileId,
+      verified_at: now(),
+      failed_reason: null,
+    }, actorId);
+  }
+
+  markBrowserLoginRequestFailed(id: string, reason: string, actorId = 'system'): BrowserLoginRequest {
+    return this.updateBrowserLoginRequestStatus(id, 'failed', {
+      failed_reason: reason,
+    }, actorId);
+  }
+
+  markBrowserLoginRequestCancelled(id: string, actorId = 'system'): BrowserLoginRequest {
+    return this.updateBrowserLoginRequestStatus(id, 'cancelled', {
+      failed_reason: null,
+    }, actorId);
+  }
+
+  expireBrowserLoginRequests(nowMs = now()): number {
+    this.ensureSchema();
+    const result = this.db.prepare(`
+      UPDATE browser_login_requests
+      SET status = 'expired', updated_at = ?
+      WHERE expires_at <= ?
+        AND status IN ('pending_confirmation', 'creating_browser', 'waiting_employee_login', 'verifying')
+    `).run(nowMs, nowMs);
+    return Number(result.changes || 0);
+  }
+
+  listBrowserLoginRequests(filter: ListBrowserLoginRequestsFilter = {}): BrowserLoginRequest[] {
+    this.ensureSchema();
+    const clauses: string[] = [];
+    const params: any[] = [];
+    if (filter.connectorId) {
+      clauses.push('connector_id = ?');
+      params.push(filter.connectorId);
+    }
+    if (filter.requesterUserId) {
+      clauses.push('requester_user_id = ?');
+      params.push(filter.requesterUserId);
+    }
+    if (filter.storeId) {
+      clauses.push('store_id = ?');
+      params.push(filter.storeId);
+    }
+    if (filter.status) {
+      clauses.push('status = ?');
+      params.push(filter.status);
+    }
+    const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+    return (this.db.prepare(`
+      SELECT * FROM browser_login_requests
+      ${where}
+      ORDER BY updated_at DESC
+    `).all(...params) as Row[]).map(mapBrowserLoginRequest);
+  }
+
+  upsertBrowserProfileFromBrowserAct(
+    input: UpsertBrowserProfileFromBrowserActInput,
+    actorId = 'system'
+  ): AdminBrowserProfile {
+    this.ensureSchema();
+    const storageStateRef = `browser-act:${input.browserActBrowserId}`;
+    const existing = this.db.prepare(`
+      SELECT * FROM browser_profiles WHERE storage_state_ref = ?
+    `).get(storageStateRef) as Row | undefined;
+
+    if (!existing) {
+      return this.createBrowserProfile({
+        platform: input.platform,
+        label: input.label,
+        storeId: input.storeId,
+        storageStateRef,
+        status: 'healthy',
+        riskLevel: input.riskLevel,
+        allowedActionLevel: input.allowedActionLevel,
+        lastCheckedAt: now(),
+        lastSuccessfulUseAt: input.lastSuccessfulUseAt,
+      }, actorId);
+    }
+
+    const timestamp = now();
+    this.db.prepare(`
+      UPDATE browser_profiles
+      SET platform = ?,
+          label = ?,
+          store_id = ?,
+          status = 'healthy',
+          risk_level = ?,
+          allowed_action_level = ?,
+          last_checked_at = ?,
+          last_successful_use_at = ?,
+          updated_at = ?
+      WHERE id = ?
+    `).run(
+      input.platform,
+      input.label,
+      input.storeId,
+      input.riskLevel,
+      input.allowedActionLevel,
+      timestamp,
+      input.lastSuccessfulUseAt ?? existing.last_successful_use_at ?? null,
+      timestamp,
+      existing.id
+    );
+    this.recordAuditEvent(actorId, 'browser_profile.browser_act_upserted', 'browser_profile', existing.id, {
+      platform: input.platform,
+      label: input.label,
+      storeId: input.storeId,
+      riskLevel: input.riskLevel,
+      allowedActionLevel: input.allowedActionLevel,
+    }, input.riskLevel === 'high' || input.riskLevel === 'critical' ? 'high' : 'medium');
+    return this.getBrowserProfile(existing.id);
+  }
+
   createBrowserProfile(input: CreateBrowserProfileInput, actorId = 'system'): AdminBrowserProfile {
     this.ensureSchema();
     const timestamp = now();
@@ -701,6 +954,57 @@ export class AdminControlPlaneService {
     const row = this.db.prepare(`SELECT * FROM feishu_conversations WHERE id = ?`).get(id) as Row | undefined;
     if (!row) throw new Error(`Conversation not found: ${id}`);
     return mapConversation(row, this.getBoundStoreIds(id));
+  }
+
+  private getPlatformAccount(id: string): AdminPlatformAccount {
+    const row = this.db.prepare(`SELECT * FROM platform_accounts WHERE id = ?`).get(id) as Row | undefined;
+    if (!row) throw new Error(`Platform account not found: ${id}`);
+    return mapPlatformAccount(row);
+  }
+
+  private getBrowserLoginRequest(id: string): BrowserLoginRequest {
+    const row = this.db.prepare(`SELECT * FROM browser_login_requests WHERE id = ?`).get(id) as Row | undefined;
+    if (!row) throw new Error(`Browser login request not found: ${id}`);
+    return mapBrowserLoginRequest(row);
+  }
+
+  private updateBrowserLoginRequestStatus(
+    id: string,
+    status: BrowserLoginRequestStatus,
+    fields: {
+      browser_act_browser_id?: string | null;
+      browser_profile_id?: string | null;
+      verified_at?: number | null;
+      failed_reason?: string | null;
+    },
+    actorId: string
+  ): BrowserLoginRequest {
+    this.ensureSchema();
+    const current = this.getBrowserLoginRequest(id);
+    const timestamp = now();
+    this.db.prepare(`
+      UPDATE browser_login_requests
+      SET status = ?,
+          browser_act_browser_id = ?,
+          browser_profile_id = ?,
+          verified_at = ?,
+          failed_reason = ?,
+          updated_at = ?
+      WHERE id = ?
+    `).run(
+      status,
+      fields.browser_act_browser_id !== undefined ? fields.browser_act_browser_id : current.browserActBrowserId ?? null,
+      fields.browser_profile_id !== undefined ? fields.browser_profile_id : current.browserProfileId ?? null,
+      fields.verified_at !== undefined ? fields.verified_at : current.verifiedAt ?? null,
+      fields.failed_reason !== undefined ? fields.failed_reason : current.failedReason ?? null,
+      timestamp,
+      id
+    );
+    this.recordAuditEvent(actorId, 'browser_login_request.status_updated', 'login_request', id, {
+      from: current.status,
+      to: status,
+    }, status === 'failed' ? 'high' : 'medium');
+    return this.getBrowserLoginRequest(id);
   }
 
   private getBrowserProfile(id: string): AdminBrowserProfile {

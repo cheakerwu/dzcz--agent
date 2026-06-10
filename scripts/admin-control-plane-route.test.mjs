@@ -53,6 +53,75 @@ test('admin control plane express route serves shared dispatcher actions', async
       assert.equal(createResult.success, true);
       assert.equal(createResult.data.name, '路由测试店');
 
+      const platformAccount = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          action: 'platformAccounts.create',
+          payload: {
+            actorId: 'route-test',
+            input: {
+              platform: 'meituan',
+              label: '路由测试美团账号',
+              storeId: createResult.data.id,
+              riskAccountClass: 'high_risk',
+            },
+          },
+        }),
+      }).then((response) => response.json());
+      assert.equal(platformAccount.success, true);
+      assert.equal(platformAccount.data.riskAccountClass, 'high_risk');
+
+      const loginRequest = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          action: 'browserLoginRequests.create',
+          payload: {
+            actorId: 'route-test',
+            input: {
+              connectorId: 'feishu',
+              requesterUserId: 'ou_route',
+              storeId: createResult.data.id,
+              platform: 'meituan',
+              platformAccountId: platformAccount.data.id,
+              loginUrl: 'https://ecom.meituan.com/',
+            },
+          },
+        }),
+      }).then((response) => response.json());
+      assert.equal(loginRequest.success, true);
+      assert.equal(loginRequest.data.status, 'pending_confirmation');
+
+      const importedProfile = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          action: 'browserProfiles.importFromBrowserAct',
+          payload: {
+            actorId: 'route-test',
+            input: {
+              platform: 'meituan',
+              label: '路由测试 BrowserAct',
+              storeId: createResult.data.id,
+              browserActBrowserId: 'chrome_route_1',
+              riskLevel: 'high',
+              allowedActionLevel: 'high_risk_write',
+            },
+          },
+        }),
+      }).then((response) => response.json());
+      assert.equal(importedProfile.success, true);
+      assert.equal(importedProfile.data.storageStateRef, 'browser-act:chrome_route_1');
+
+      const loginRequests = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'browserLoginRequests.list', payload: { filter: { requesterUserId: 'ou_route' } } }),
+      }).then((response) => response.json());
+      assert.equal(loginRequests.success, true);
+      assert.equal(loginRequests.data.length, 1);
+
       const dashboard = await fetch(baseUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },

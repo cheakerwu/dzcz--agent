@@ -7,9 +7,19 @@ export type MemoryStatus = 'candidate' | 'pending_review' | 'active' | 'conflict
 export type BrowserProfileStatus = 'healthy' | 'needs_reauth' | 'expired' | 'revoked' | 'locked' | 'unhealthy';
 export type BrowserActionLevel = 'read_only' | 'low_risk_write' | 'medium_risk_write' | 'high_risk_write' | 'destructive';
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
-export type AdminEntityType = 'store' | 'employee' | 'conversation' | 'platform_account' | 'browser_profile' | 'task';
+export type RiskAccountClass = 'standard' | 'sensitive' | 'high_risk' | 'critical';
+export type AdminEntityType = 'store' | 'employee' | 'conversation' | 'platform_account' | 'browser_profile' | 'login_request' | 'task';
 export type AssignmentStatus = 'active' | 'revoked';
 export type ProviderSyncStatus = 'pending' | 'synced' | 'disabled' | 'error' | 'deleted';
+export type BrowserLoginRequestStatus =
+  | 'pending_confirmation'
+  | 'creating_browser'
+  | 'waiting_employee_login'
+  | 'verifying'
+  | 'healthy'
+  | 'failed'
+  | 'expired'
+  | 'cancelled';
 
 export interface AdminActionRequest<TPayload = Record<string, unknown>> {
   action: string;
@@ -189,6 +199,37 @@ export interface CreateBrowserProfileInput {
   lastSuccessfulUseAt?: number;
 }
 
+export interface UpsertBrowserProfileFromBrowserActInput {
+  platform: string;
+  label: string;
+  storeId: string;
+  browserActBrowserId: string;
+  riskLevel: RiskLevel;
+  allowedActionLevel: BrowserActionLevel;
+  lastSuccessfulUseAt?: number;
+}
+
+export interface CreatePlatformAccountInput {
+  platform: string;
+  label: string;
+  storeId?: string;
+  accountRef?: string;
+  status?: 'active' | 'paused' | 'revoked';
+  riskAccountClass?: RiskAccountClass;
+}
+
+export interface AdminPlatformAccount {
+  id: string;
+  platform: string;
+  label: string;
+  storeId?: string;
+  accountRef?: string;
+  status: 'active' | 'paused' | 'revoked';
+  riskAccountClass: RiskAccountClass;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface AdminBrowserProfile {
   id: string;
   platform: string;
@@ -203,6 +244,53 @@ export interface AdminBrowserProfile {
   lastSuccessfulUseAt?: number;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface AdminBrowserActBrowser {
+  id: string;
+  name: string;
+  type: string;
+  state?: string;
+  desc?: string;
+}
+
+export interface CreateBrowserLoginRequestInput {
+  connectorId: string;
+  requesterUserId: string;
+  requesterOpenId?: string;
+  employeeId?: string;
+  storeId: string;
+  platform: string;
+  platformAccountId?: string;
+  loginUrl: string;
+}
+
+export interface BrowserLoginRequest {
+  id: string;
+  connectorId: string;
+  requesterUserId: string;
+  requesterOpenId?: string;
+  employeeId?: string;
+  storeId: string;
+  platform: string;
+  platformAccountId?: string;
+  browserProfileId?: string;
+  browserActBrowserId?: string;
+  sessionName: string;
+  status: BrowserLoginRequestStatus;
+  loginUrl: string;
+  expiresAt: number;
+  verifiedAt?: number;
+  failedReason?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ListBrowserLoginRequestsFilter {
+  connectorId?: string;
+  requesterUserId?: string;
+  storeId?: string;
+  status?: BrowserLoginRequestStatus;
 }
 
 export interface GrantBrowserProfilePermissionInput {

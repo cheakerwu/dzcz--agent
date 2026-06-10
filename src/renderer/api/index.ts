@@ -9,17 +9,23 @@ import type { AgentTab } from '../../types/agent-tab';
 import type { Message } from '../../types/message';
 import type {
   AdminActionRequest,
+  AdminBrowserActBrowser,
+  BrowserLoginRequest,
   BindConversationToStoreInput,
   CreateBrowserProfileInput,
   CreateMemoryItemInput,
+  CreatePlatformAccountInput,
   CreateStoreInput,
   GrantBrowserProfilePermissionInput,
   ListAuditEventsFilter,
+  ListBrowserLoginRequestsFilter,
   ListMemoryItemsFilter,
   MemoryStatus,
+  UpsertBrowserProfileFromBrowserActInput,
   UpsertEmployeeInput,
   UpsertFeishuConversationInput,
   AssignEmployeeToStoreInput,
+  AdminPlatformAccount,
 } from '../../types/admin-control-plane';
 
 // Web 模式的事件监听器存储
@@ -166,12 +172,36 @@ export const api = {
     return unwrapAdminData(await api.adminControlPlane({ action: 'memories.sync', payload: { memoryId, actorId: 'admin-console' } }));
   },
 
+  async adminListPlatformAccounts(): Promise<AdminPlatformAccount[]> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'platformAccounts.list' }));
+  },
+
+  async adminCreatePlatformAccount(input: CreatePlatformAccountInput): Promise<AdminPlatformAccount> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'platformAccounts.create', payload: { input, actorId: 'admin-console' } }));
+  },
+
   async adminListBrowserProfiles(): Promise<any> {
     return unwrapAdminData(await api.adminControlPlane({ action: 'browserProfiles.list' }));
   },
 
   async adminCreateBrowserProfile(input: CreateBrowserProfileInput): Promise<any> {
     return unwrapAdminData(await api.adminControlPlane({ action: 'browserProfiles.create', payload: { input, actorId: 'admin-console' } }));
+  },
+
+  async adminListBrowserLoginRequests(filter?: ListBrowserLoginRequestsFilter): Promise<BrowserLoginRequest[]> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'browserLoginRequests.list', payload: { filter: filter || {} } }));
+  },
+
+  async adminListBrowserActBrowsers(): Promise<AdminBrowserActBrowser[]> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'browserAct.browsers.list' }));
+  },
+
+  async adminImportBrowserActProfile(input: UpsertBrowserProfileFromBrowserActInput): Promise<any> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'browserProfiles.importFromBrowserAct', payload: { input, actorId: 'admin-console' } }));
+  },
+
+  async adminExpireBrowserLoginRequests(): Promise<{ expiredCount: number }> {
+    return unwrapAdminData(await api.adminControlPlane({ action: 'browserLoginRequests.expire', payload: { actorId: 'admin-console' } }));
   },
 
   async adminGrantBrowserProfilePermission(input: GrantBrowserProfilePermissionInput): Promise<any> {
