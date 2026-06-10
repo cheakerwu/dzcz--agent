@@ -268,7 +268,7 @@ export function ModelConfig({ onClose, tabId }: ModelConfigProps) {
                 {lang === 'zh' ? '模型未配置' : 'Model not configured'}
               </h3>
               <div className="mt-2 text-sm text-yellow-700">
-                <p>{lang === 'zh' ? '请配置 API 地址和密钥后才能使用 Local Agent Terminal。' : 'Please configure the API URL and key before using Local Agent Terminal.'}</p>
+                <p>{lang === 'zh' ? '请配置 API 地址和密钥后才能使用 点之出众。' : 'Please configure the API URL and key before using 点之出众.'}</p>
               </div>
             </div>
           </div>

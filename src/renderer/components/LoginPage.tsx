@@ -63,7 +63,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           textAlign: 'center',
           letterSpacing: '1px',
         }}>
-          Local Agent Terminal
+          点之出众
         </h1>
         <p style={{
           fontSize: '13px',
@@ -71,7 +71,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           marginBottom: '28px',
           textAlign: 'center',
         }}>
-          请输入访问密码
+          请输入内部访问密码
         </p>
         
         <form onSubmit={handleSubmit}>

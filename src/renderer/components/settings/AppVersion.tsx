@@ -107,12 +107,12 @@ export function AppVersion({ initialUpdateInfo }: AppVersionProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             <img
               src={iconUrl}
-              alt="Local Agent Terminal"
+              alt="点之出众"
               style={{ width: '48px', height: '48px', borderRadius: '10px' }}
             />
             <div>
               <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--settings-text)' }}>
-                Local Agent Terminal
+                点之出众
               </div>
               <div style={{ fontSize: '13px', color: 'var(--settings-text-dim)', marginTop: '2px' }}>
                 {lang === 'zh' ? '版本' : 'Version'} {APP_VERSION}

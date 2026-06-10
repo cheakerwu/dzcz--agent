@@ -1,7 +1,7 @@
 /**
  * 快速入门页面
  * 
- * 帮助用户快速了解和使用 Local Agent Terminal
+ * 帮助用户快速了解和使用 点之出众
  */
 
 import React from 'react';
@@ -55,12 +55,12 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
       }}>
         <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '6px', color: 'inherit', display: 'flex', alignItems: 'center', marginLeft: '-20px' }}>
           <span style={{ marginRight: '8px' }}>👋</span>
-          {lang === 'zh' ? '欢迎使用 Local Agent Terminal' : 'Welcome to Local Agent Terminal'}
+          {lang === 'zh' ? '欢迎使用 点之出众' : 'Welcome to 点之出众'}
         </h2>
         <p style={{ fontSize: '13px', lineHeight: '1.5', color: 'var(--settings-text-dim)' }}>
           {lang === 'zh'
-            ? 'Local Agent Terminal 是一个本地优先的 AI 助手工作台，支持文件操作、命令执行、网页自动化、定时任务、长期记忆和 Skill 扩展。你可以接入自己的模型服务和工具服务，让 Agent 在本机环境中完成日常研发、办公和自动化任务。'
-            : 'Local Agent Terminal is a local-first AI assistant workspace for file operations, command execution, browser automation, scheduled tasks, long-term memory, and Skill extensions. Connect your own model and tool services, then let the agent handle development, office, and automation workflows on your machine.'}
+            ? '点之出众 是一个本地优先的 AI 助手工作台，支持文件操作、命令执行、网页自动化、定时任务、长期记忆和 Skill 扩展。你可以接入自己的模型服务和工具服务，让 Agent 在本机环境中完成日常研发、办公和自动化任务。'
+            : '点之出众 is a local-first AI assistant workspace for file operations, command execution, browser automation, scheduled tasks, long-term memory, and Skill extensions. Connect your own model and tool services, then let the agent handle development, office, and automation workflows on your machine.'}
         </p>
       </div>
 
@@ -228,13 +228,13 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
             <div style={{ marginLeft: '16px', marginTop: '4px' }}>
               {lang === 'zh' ? (
                 <>
-                  • Python：用于执行 Python 脚本和 Skill（💬 告诉 Local Agent Terminal："帮我安装 Python"）<br/>
+                  • Python：用于执行 Python 脚本和 Skill（💬 告诉 点之出众："帮我安装 Python"）<br/>
                   • Chrome：浏览器工具需要系统已安装 Chrome<br/>
                   • Node.js：用于运行需要 JavaScript 环境的程序
                 </>
               ) : (
                 <>
-                  • Python: For running Python scripts and Skills (💬 Tell Local Agent Terminal: "Help me install Python")<br/>
+                  • Python: For running Python scripts and Skills (💬 Tell 点之出众: "Help me install Python")<br/>
                   • Chrome: Required by browser tools<br/>
                   • Node.js: For running programs that need a JavaScript environment
                 </>
@@ -278,7 +278,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
                 {lang === 'zh' ? '⚡ 快速安装' : '⚡ Quick Install'}
               </div>
               <div style={{ marginBottom: '8px', color: 'var(--settings-accent)', fontWeight: '600' }}>
-                {lang === 'zh' ? '💬 只需告诉 Local Agent Terminal："帮我安装 Python"，即可自动完成安装！' : '💬 Just tell Local Agent Terminal: "Help me install Python" and it will handle the rest!'}
+                {lang === 'zh' ? '💬 只需告诉 点之出众："帮我安装 Python"，即可自动完成安装！' : '💬 Just tell 点之出众: "Help me install Python" and it will handle the rest!'}
               </div>
               <div style={{ marginBottom: '6px', color: 'var(--settings-text)', fontWeight: '600' }}>
                 {lang === 'zh' ? '📦 手动安装 Python' : '📦 Manual Python Installation'}
@@ -415,7 +415,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
               <span style={{ fontWeight: '600', color: 'var(--settings-text)', fontSize: '14px' }}>{lang === 'zh' ? '飞书机器人' : 'Lark Bot'}</span>
             </div>
             <div style={{ marginLeft: '28px', marginBottom: '8px' }}>
-              {lang === 'zh' ? '将 Local Agent Terminal 接入飞书，在飞书中直接与 AI 对话，支持私聊和群组' : 'Connect Local Agent Terminal to Lark for direct AI conversations, supporting both private chats and group messages'}
+              {lang === 'zh' ? '将 点之出众 接入飞书，在飞书中直接与 AI 对话，支持私聊和群组' : 'Connect 点之出众 to Lark for direct AI conversations, supporting both private chats and group messages'}
             </div>
           </div>
 
@@ -445,13 +445,13 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
                 <>
                   • <strong>私聊</strong>：首位用户自动成为管理员，后续用户需管理员审批配对码<br/>
                   • <strong>群组</strong>：必须 @ 机器人才会回复，无需配对<br/>
-                  • <strong>管理员审批</strong>：发送 <code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>deepbot pairing approve feishu &lt;配对码&gt;</code>
+                  • <strong>管理员审批</strong>：发送 <code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>dzcz pairing approve feishu &lt;配对码&gt;</code>
                 </>
               ) : (
                 <>
                   • <strong>Private Chat</strong>: The first user becomes admin automatically; others need admin approval via pairing code<br/>
                   • <strong>Group Chat</strong>: Must @ the bot to get a reply; no pairing needed<br/>
-                  • <strong>Admin Approval</strong>: Send <code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>deepbot pairing approve feishu &lt;pairing_code&gt;</code>
+                  • <strong>Admin Approval</strong>: Send <code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>dzcz pairing approve feishu &lt;pairing_code&gt;</code>
                 </>
               )}
             </div>
@@ -526,8 +526,8 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
             </div>
             <div style={{ marginLeft: '28px', marginBottom: '8px' }}>
               {lang === 'zh'
-                ? 'Skill 是可以扩展 Local Agent Terminal 能力的技能包，类似于插件系统。通过安装不同的 Skill，可以让 AI 获得更多专业能力。'
-                : 'Skills are extensible capability packages for Local Agent Terminal, similar to a plugin system. By installing different Skills, you can give the AI more specialized abilities.'}
+                ? 'Skill 是可以扩展 点之出众 能力的技能包，类似于插件系统。通过安装不同的 Skill，可以让 AI 获得更多专业能力。'
+                : 'Skills are extensible capability packages for 点之出众, similar to a plugin system. By installing different Skills, you can give the AI more specialized abilities.'}
             </div>
           </div>
 
@@ -537,12 +537,12 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
               {lang === 'zh' ? (
                 <>
                   • 点击聊天界面的 <code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>[skill]</code> 按钮进入 Skill 管理，在搜索框中搜索关键词<br/>
-                  • 或直接告诉 Local Agent Terminal 你的需求：<code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>"搜索能做 [某件事] 的 Skill"</code>
+                  • 或直接告诉 点之出众 你的需求：<code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>"搜索能做 [某件事] 的 Skill"</code>
                 </>
               ) : (
                 <>
                   • Click the <code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>[skill]</code> button in the chat to open Skill Manager and search by keyword<br/>
-                  • Or just tell Local Agent Terminal what you need: <code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>"Search for a Skill that can [do something]"</code>
+                  • Or just tell 点之出众 what you need: <code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>"Search for a Skill that can [do something]"</code>
                 </>
               )}
             </div>
@@ -667,8 +667,8 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
           <div style={{ marginBottom: '12px' }}>
             <div style={{ marginBottom: '8px' }}>
               {lang === 'zh'
-                ? 'Local Agent Terminal 可以通过命令行调用任何已安装的外部工具（Python 包、Node.js 工具、命令行程序等）。'
-                : 'Local Agent Terminal can invoke any installed external tool via the command line (Python packages, Node.js tools, CLI programs, etc.).'}
+                ? '点之出众 可以通过命令行调用任何已安装的外部工具（Python 包、Node.js 工具、命令行程序等）。'
+                : '点之出众 can invoke any installed external tool via the command line (Python packages, Node.js tools, CLI programs, etc.).'}
             </div>
           </div>
 
@@ -679,7 +679,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
               <span style={{ fontWeight: '600', color: 'var(--settings-text)', fontSize: '13px' }}>{lang === 'zh' ? '直接使用' : 'Direct Usage'}</span>
             </div>
             <div style={{ marginLeft: '28px', marginBottom: '6px', fontSize: '12px' }}>
-              {lang === 'zh' ? '安装完成后，直接告诉 Local Agent Terminal 使用该工具即可：' : 'After installation, just tell Local Agent Terminal to use the tool:'}
+              {lang === 'zh' ? '安装完成后，直接告诉 点之出众 使用该工具即可：' : 'After installation, just tell 点之出众 to use the tool:'}
             </div>
             <div style={{ 
               marginLeft: '28px',
@@ -730,7 +730,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
                   💬 "是，读取markitdown使用说明，帮我创建 Skill"<br/>
                   <span style={{ color: 'var(--settings-text-dim)' }}>→ 之后直接说需求，AI 自动调用 Skill</span><br/>
                   💬 "使用markitdown skill把这个 PDF 转成 Markdown"<br/>
-                  <span style={{ color: 'var(--settings-text-dim)' }}>→ 可以让 Local Agent Terminal 记住只要是文档处理，都使用这个 skill</span><br/>
+                  <span style={{ color: 'var(--settings-text-dim)' }}>→ 可以让 点之出众 记住只要是文档处理，都使用这个 skill</span><br/>
                   💬 "记住所有文档的读取，都使用markitdown skill"
                 </>
               ) : (
@@ -740,7 +740,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
                   💬 "Yes, read the markitdown docs and create a Skill for me"<br/>
                   <span style={{ color: 'var(--settings-text-dim)' }}>→ Then just describe your needs and the AI will call the Skill automatically</span><br/>
                   💬 "Use the markitdown skill to convert this PDF to Markdown"<br/>
-                  <span style={{ color: 'var(--settings-text-dim)' }}>→ You can also tell Local Agent Terminal to always use this skill for document processing</span><br/>
+                  <span style={{ color: 'var(--settings-text-dim)' }}>→ You can also tell 点之出众 to always use this skill for document processing</span><br/>
                   💬 "Remember to always use the markitdown skill for reading documents"
                 </>
               )}
@@ -1069,8 +1069,8 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
                 fontSize: '12px'
               }}>
                 {lang === 'zh'
-                  ? '💬 告诉 Local Agent Terminal："帮我安装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md"'
-                  : '💬 Tell Local Agent Terminal: "Install Agent Reach for me: https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md"'}
+                  ? '💬 告诉 点之出众："帮我安装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md"'
+                  : '💬 Tell 点之出众: "Install Agent Reach for me: https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md"'}
               </div>
               <div style={{ marginTop: '4px', fontSize: '12px' }}>
                 {lang === 'zh' ? '或访问：' : 'Or visit: '}<a 
@@ -1135,8 +1135,8 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
                 fontSize: '12px'
               }}>
                 {lang === 'zh'
-                  ? '💬 告诉 Local Agent Terminal："帮我安装 mcporter：npm install -g mcporter"'
-                  : '💬 Tell Local Agent Terminal: "Install mcporter for me: npm install -g mcporter"'}
+                  ? '💬 告诉 点之出众："帮我安装 mcporter：npm install -g mcporter"'
+                  : '💬 Tell 点之出众: "Install mcporter for me: npm install -g mcporter"'}
               </div>
               <div style={{ marginTop: '4px', fontSize: '12px' }}>
                 {lang === 'zh' ? '或访问：' : 'Or visit: '}<a 
@@ -1186,7 +1186,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
                       <strong>第一步：</strong>打开聊天界面的 <code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>[skill]</code> 按钮，搜索「imap-smtp-email-chinese」，点击安装
                     </div>
                     <div>
-                      <strong>第二步：</strong>💬 告诉 Local Agent Terminal："按照 imap-smtp-email-chinese skill 的说明配置好邮箱信息"
+                      <strong>第二步：</strong>💬 告诉 点之出众："按照 imap-smtp-email-chinese skill 的说明配置好邮箱信息"
                     </div>
                   </>
                 ) : (
@@ -1195,7 +1195,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
                       <strong>Step 1:</strong> Click the <code style={{ padding: '1px 4px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', fontFamily: 'monospace' }}>[skill]</code> button in chat, search for "imap-smtp-email-chinese", and install
                     </div>
                     <div>
-                      <strong>Step 2:</strong> 💬 Tell Local Agent Terminal: "Configure the imap-smtp-email-chinese skill with my email settings"
+                      <strong>Step 2:</strong> 💬 Tell 点之出众: "Configure the imap-smtp-email-chinese skill with my email settings"
                     </div>
                   </>
                 )}
@@ -1226,8 +1226,8 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
             </div>
             <div style={{ marginLeft: '28px', marginBottom: '8px' }}>
               {lang === 'zh'
-                ? '记忆是 Local Agent Terminal 的长期存储系统，用于记住用户的偏好、习惯、角色定义和重要信息。不同于对话历史（会话结束后清空），记忆会永久保存，让 AI 越用越懂你。'
-                : 'Memory is Local Agent Terminal\'s long-term storage system for remembering your preferences, habits, role definitions, and important information. Unlike chat history (cleared after each session), memories are saved permanently, so the AI gets to know you better over time.'}
+                ? '记忆是 点之出众 的长期存储系统，用于记住用户的偏好、习惯、角色定义和重要信息。不同于对话历史（会话结束后清空），记忆会永久保存，让 AI 越用越懂你。'
+                : 'Memory is 点之出众\'s long-term storage system for remembering your preferences, habits, role definitions, and important information. Unlike chat history (cleared after each session), memories are saved permanently, so the AI gets to know you better over time.'}
             </div>
           </div>
 

@@ -551,17 +551,17 @@ export class FeishuConnector implements Connector {
           const store = SystemConfigStore.getInstance();
           const record = store.getPairingRecordByUser('feishu', feishuMessage.sender.id);
           if (record?.approved) {
-            feishuMessage.systemContext = `[系统通知] 这是第一次有用户连接到 Local Agent Terminal。该用户已被自动设置为管理员。请在回复中告知用户：
+            feishuMessage.systemContext = `[系统通知] 这是第一次有用户连接到点之出众。该用户已被自动设置为管理员。请在回复中告知用户：
 1. 他已被自动设置为管理员
-2. 作为管理员，他可以通过发送 "deepbot pairing approve feishu <配对码>" 来批准其他用户的配对请求
-3. 也可以在 Local Agent Terminal 桌面端的"系统管理 → 飞书 → Pairing 管理"界面中管理用户权限`;
+2. 作为管理员，他可以通过发送 "dzcz pairing approve feishu <配对码>" 来批准其他用户的配对请求
+3. 也可以在点之出众管理后台的"系统管理 → 飞书 → Pairing 管理"界面中管理用户权限`;
             await this.connectorManager.handleIncomingMessage('feishu', feishuMessage);
             return;
           }
 
           await this.outbound.sendMessage({
             conversationId: feishuMessage.conversation.id,
-            content: `请使用配对码进行授权：${code}\n\n管理员可以使用以下命令批准：\ndeepbot pairing approve feishu ${code}`,
+            content: `请使用配对码进行内部授权：${code}\n\n管理员可以使用以下命令批准：\ndzcz pairing approve feishu ${code}`,
           });
         }
         
@@ -811,7 +811,7 @@ export class FeishuConnector implements Connector {
     const receiveIdType = openId ? 'open_id' : 'chat_id';
     this.outbound.sendMessage({
       conversationId: target,
-      content: '✅ 授权完成，你可以开始和 Local Agent Terminal 对话了。\n\n发送「你能做什么」获取使用帮助。',
+      content: '✅ 授权完成，你可以开始使用点之出众了。\n\n可直接发送内部任务、门店问题或需要处理的飞书流程。',
       _receiveIdType: receiveIdType,
     }).catch(() => {});
   }
@@ -836,15 +836,15 @@ export class FeishuConnector implements Connector {
 
   /**
    * 处理管理员指令（在安全检查之前执行，允许管理员执行 pairing approve）
-   * 支持指令：deepbot pairing approve feishu <code>
+   * 支持指令：dzcz pairing approve feishu <code>
    * 权限验证：发送者必须在数据库中标记为 is_admin
    * @returns true 表示已处理该指令，调用方应直接 return
    */
   private async handleAdminCommand(message: FeishuIncomingMessage): Promise<boolean> {
     const text = (message.content.text || '').trim();
 
-    // 匹配 pairing approve 指令，格式：deepbot pairing approve feishu <code>
-    const approveMatch = text.match(/^deepbot\s+pairing\s+approve\s+feishu\s+(\S+)$/i);
+    // 匹配 pairing approve 指令，格式：dzcz pairing approve feishu <code>
+    const approveMatch = text.match(/^(?:dzcz|deepbot)\s+pairing\s+approve\s+feishu\s+(\S+)$/i);
     if (!approveMatch) {
       return false;
     }
@@ -886,7 +886,7 @@ export class FeishuConnector implements Connector {
       store.approvePairingRecord(code);
       await this.outbound.sendMessage({
         conversationId: message.conversation.id,
-        content: `✅ 配对码 ${code} 已批准，用户现在可以使用 Local Agent Terminal 了。`,
+        content: `✅ 配对码 ${code} 已批准，用户现在可以使用点之出众了。`,
       });
       // 给被批准用户发送欢迎消息
       this.connectorManager.notifyPairingApproved('feishu', record.userId, record.openId);
