@@ -771,6 +771,7 @@ coverage:
   browser-act browser open + remote-assist command construction
   /login-done -> browser-act URL/title/markdown verification
   verified browser profile storage_state_ref = browser-act:<id>
+  successful completion -> best-effort browser-act session close
   prompt context exposes capability label/action level but not browser-act id
 ```
 

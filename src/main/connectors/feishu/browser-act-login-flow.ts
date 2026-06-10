@@ -120,6 +120,11 @@ export async function completeBrowserActLoginRequest(options: {
     lastSuccessfulUseAt: Date.now(),
   }, actorId);
   service.markBrowserLoginRequestHealthy(request.id, profile.id, actorId);
+  try {
+    await browserAct.closeSession(request.sessionName);
+  } catch {
+    // Session cleanup is best effort after the login state has already been verified and registered.
+  }
   return `登录态已登记：${profile.label}。后台只保存 browser-act 引用，不保存 cookie、密码或验证码。`;
 }
 

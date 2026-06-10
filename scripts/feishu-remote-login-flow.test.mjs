@@ -147,6 +147,10 @@ test('feishu remote assist login flow registers a verified browser-act profile w
     assert.equal(profile.storageStateRef, 'browser-act:chrome_mt');
     assert.equal(profile.allowedActionLevel, 'high_risk_write');
     assert.equal(profile.riskLevel, 'high');
+    assert.ok(
+      runner.calls.some((args) => args.join(' ') === `session close ${loginRequest.sessionName}`),
+      'successful login completion should close the browser-act session',
+    );
 
     const promptContext = service.buildPromptContextForConnectorSession({
       connectorId: 'feishu',
