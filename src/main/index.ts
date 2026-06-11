@@ -1856,6 +1856,10 @@ app.whenReady().then(() => {
   // 🔥 注册连接器 IPC 处理器
   const { registerConnectorHandlers, setGatewayForConnectorHandler } = require('./ipc/connector-handler');
   registerConnectorHandlers();
+
+  // 管理后台控制平面 IPC
+  const { registerAdminControlPlaneHandlers } = require('./ipc/admin-control-plane-handler');
+  registerAdminControlPlaneHandlers();
   
   // 🔥 创建系统托盘
   createTray();

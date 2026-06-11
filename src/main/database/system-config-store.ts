@@ -31,6 +31,7 @@ import * as ModelConfigModule from './model-config';
 import * as ToolConfigModule from './tool-config';
 import * as NameConfigModule from './name-config';
 import * as ConnectorConfigModule from './connector-config';
+import { initAdminControlPlaneTables } from '../admin-control-plane/schema';
 
 /**
  * 系统配置存储类
@@ -238,6 +239,9 @@ export class SystemConfigStore {
         UNIQUE(connector_id, user_id)
       )
     `);
+
+    // 管理后台控制平面表
+    initAdminControlPlaneTables(this.db);
     
     // Token 用量统计表（每日快照，按模型累加）
     this.db.exec(`

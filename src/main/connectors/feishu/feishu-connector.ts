@@ -22,7 +22,17 @@ import { safeJsonParse } from '../../../shared/utils/json-utils';
 import { ensureDirectoryExists } from '../../../shared/utils/fs-utils';
 import type { ConnectorManager } from '../connector-manager';
 import { SystemConfigStore } from '../../database/system-config-store';
+import { AdminControlPlaneService } from '../../admin-control-plane/service';
+import { BrowserActControlService } from '../../browser-act/browser-act-control-service';
 import { FeishuDocumentHandler } from './document-handler';
+import { FeishuLoginCommandHandler, parseLoginCommand } from './login-command-handler';
+import {
+  cancelBrowserActLoginRequest,
+  completeBrowserActLoginRequest,
+  getBrowserActLoginStatus,
+  startBrowserActLoginRequest,
+  type FeishuRemoteLoginStartInput,
+} from './browser-act-login-flow';
 
 
 export class FeishuConnector implements Connector {
@@ -36,6 +46,7 @@ export class FeishuConnector implements Connector {
   private connectorManager: ConnectorManager;
   private isStarted: boolean = false;
   private documentHandler!: FeishuDocumentHandler;
+  private loginCommandHandler!: FeishuLoginCommandHandler;
   
   // 消息去重：缓存最近 1000 条已处理的消息 ID
   private processedMessages: Set<string> = new Set();
@@ -98,6 +109,13 @@ export class FeishuConnector implements Connector {
     
     // 初始化文档处理器
     this.documentHandler = new FeishuDocumentHandler(this.client);
+    this.loginCommandHandler = new FeishuLoginCommandHandler({
+      sendMessage: (input) => this.outbound.sendMessage(input),
+      startLogin: (input) => this.startBrowserActLogin(input),
+      completeLogin: (input) => this.completeBrowserActLogin(input.requestCode, input.requesterUserId, input.requesterOpenId),
+      cancelLogin: (input) => this.cancelBrowserActLogin(input.requestCode, input.requesterUserId, input.requesterOpenId),
+      getLoginStatus: (input) => this.getBrowserActLoginStatus(input.requestCode, input.requesterUserId, input.requesterOpenId),
+    });
   }
   
   async start(): Promise<void> {
@@ -254,6 +272,54 @@ export class FeishuConnector implements Connector {
       status: 'unhealthy',
       message: this.wsClient ? '连接器未完全启动' : 'WebSocket 未连接',
     };
+  }
+
+  private getAdminControlPlaneService(): AdminControlPlaneService {
+    return new AdminControlPlaneService(SystemConfigStore.getInstance().getDb());
+  }
+
+  private createBrowserActControlService(): BrowserActControlService {
+    const settings = SystemConfigStore.getInstance().getWorkspaceSettings();
+    return new BrowserActControlService({ workspaceDir: settings.workspaceDir });
+  }
+
+  private async startBrowserActLogin(input: FeishuRemoteLoginStartInput) {
+    return startBrowserActLoginRequest({
+      service: this.getAdminControlPlaneService(),
+      browserAct: this.createBrowserActControlService(),
+      input,
+      actorId: 'feishu-login',
+    });
+  }
+
+  private async completeBrowserActLogin(requestCode: string, requesterUserId: string, requesterOpenId?: string): Promise<string> {
+    return completeBrowserActLoginRequest({
+      service: this.getAdminControlPlaneService(),
+      browserAct: this.createBrowserActControlService(),
+      requestCode,
+      requesterUserId,
+      requesterOpenId,
+      actorId: 'feishu-login',
+    });
+  }
+
+  private async cancelBrowserActLogin(requestCode: string, requesterUserId: string, requesterOpenId?: string): Promise<string> {
+    return cancelBrowserActLoginRequest({
+      service: this.getAdminControlPlaneService(),
+      requestCode,
+      requesterUserId,
+      requesterOpenId,
+      actorId: 'feishu-login',
+    });
+  }
+
+  private async getBrowserActLoginStatus(requestCode: string, requesterUserId: string, requesterOpenId?: string): Promise<string> {
+    return getBrowserActLoginStatus({
+      service: this.getAdminControlPlaneService(),
+      requestCode,
+      requesterUserId,
+      requesterOpenId,
+    });
   }
   
   // ========== 消息处理 ==========
@@ -574,6 +640,12 @@ export class FeishuConnector implements Connector {
           });
         }
         
+        return;
+      }
+
+      const loginCommand = parseLoginCommand(feishuMessage.content.text || '');
+      if (loginCommand) {
+        await this.loginCommandHandler.handle(loginCommand, feishuMessage);
         return;
       }
       

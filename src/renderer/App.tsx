@@ -9,6 +9,7 @@ import { ChatWindow } from './components/ChatWindow';
 import { SkillManager } from './components/SkillManager';
 import { ScheduledTaskManager } from './components/ScheduledTaskManager';
 import { SystemSettings } from './components/SystemSettings';
+import { AdminConsole } from './components/AdminConsole';
 import { Message } from '../types/message';
 import type { AgentTab } from '../types/agent-tab';
 import { api } from './api';
@@ -48,6 +49,7 @@ function App() {
   const [isSkillManagerOpen, setIsSkillManagerOpen] = useState(false);
   const [isScheduledTaskManagerOpen, setIsScheduledTaskManagerOpen] = useState(false);
   const [isSystemSettingsOpen, setIsSystemSettingsOpen] = useState(false);
+  const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState(false);
   const [hasModelConfig, setHasModelConfig] = useState(true);
 
   // 全局 Toast
@@ -758,6 +760,7 @@ function App() {
         onOpenSkillManager={() => setIsSkillManagerOpen(true)}
         onOpenScheduledTaskManager={() => setIsScheduledTaskManagerOpen(true)}
         onOpenSystemSettings={() => setIsSystemSettingsOpen(true)}
+        onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
         tabs={tabs}
         activeTabId={activeTabId}
         onTabClick={handleSwitchTab}
@@ -802,6 +805,11 @@ function App() {
         onClose={() => {
           setIsSystemSettingsOpen(false);
         }}
+      />
+
+      <AdminConsole
+        isOpen={isAdminConsoleOpen}
+        onClose={() => setIsAdminConsoleOpen(false)}
       />
 
       {/* 全局 Toast */}
