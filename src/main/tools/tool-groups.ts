@@ -67,8 +67,8 @@ export const TOOL_GROUPS: Record<ToolGroupName, string[]> = {
   // 邮件
   email: ['send_email'],
 
-  // Skill 管理
-  skill: ['skill_manager'],
+  // Skill 管理 + Skill 动态工具
+  skill: ['skill_manager', 'skill__'],
 
   // 定时任务
   scheduled: ['scheduled_task'],

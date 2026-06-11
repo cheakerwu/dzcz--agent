@@ -52,6 +52,7 @@
     "@mariozechner/pi-agent-core": "^0.73.1",
     "@mariozechner/pi-ai": "^0.73.1",
     "@mariozechner/pi-coding-agent": "0.73.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@mozilla/readability": "^0.6.0",
     "@sinclair/typebox": "^0.34.48",
     "@types/adm-zip": "^0.5.8",

@@ -42,6 +42,8 @@ import { feishuDocToolPlugin } from '../feishu-doc-tool';
 import { feishuCardToolPlugin } from '../feishu-card-tool';
 import { feishuBitableToolPlugin } from '../feishu-bitable-tool';
 import { ocrToolPlugin } from '../ocr-tool';
+import { mcpAdapterToolPlugin } from '../mcp-adapter';
+import { skillLoaderPlugin } from '../skill-loader';
 
 /**
  * 解析 plugin.create() 的返回值，统一处理 Promise 和数组/单个工具
@@ -235,6 +237,28 @@ export class ToolLoader {
       // OCR 文字识别工具
       if (isEnabled(TOOL_NAMES.OCR_IMAGE) || isEnabled(TOOL_NAMES.OCR_PDF)) {
         tools.push(...await resolvePluginTools(ocrToolPlugin.create(pluginOpts)));
+      }
+
+      // MCP 适配器（连接外部 MCP Server，动态注册工具）
+      try {
+        const mcpTools = await resolvePluginTools(mcpAdapterToolPlugin.create(pluginOpts));
+        tools.push(...mcpTools);
+        if (mcpTools.length > 1) {  // >1 因为至少有管理工具
+          console.log(`✅ MCP 适配器: ${mcpTools.length - 1} 个外部工具`);
+        }
+      } catch (error) {
+        console.warn('⚠️ MCP 适配器加载失败（不影响其他工具）:', error);
+      }
+
+      // Skill 动态加载器（将 Skill 的 tools.json 注册为 AgentTool）
+      try {
+        const skillTools = await resolvePluginTools(skillLoaderPlugin.create(pluginOpts));
+        tools.push(...skillTools);
+        if (skillTools.length > 0) {
+          console.log(`✅ Skill 工具: ${skillTools.length} 个`);
+        }
+      } catch (error) {
+        console.warn('⚠️ Skill Loader 加载失败（不影响其他工具）:', error);
       }
 
     } catch (error) {
