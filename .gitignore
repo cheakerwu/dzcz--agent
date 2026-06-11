@@ -54,3 +54,7 @@ agent-browser-main/
 /scripts/package-releases.sh
 /docs/deepbot-as-harness-engineering.md
 .worktrees/
+
+# Local generated directories
+.codegraph/
+.deepbot/
