@@ -208,5 +208,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     }
+  },
+  "optionalDependencies": {
+    "xlsx": "^0.18.5"
   }
 }

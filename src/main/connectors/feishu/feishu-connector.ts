@@ -157,11 +157,20 @@ export class FeishuConnector implements Connector {
             console.error('[FeishuConnector] ❌ 异步处理消息失败:', error);
           });
         });
-        
+
         // 立即返回成功响应
         return { code: 0 };
       },
     });
+
+    // 注册卡片回调处理器（如果存在）
+    try {
+      const { registerCardCallbackHandler } = await import('../../tools/feishu-card-callback');
+      registerCardCallbackHandler(eventDispatcher);
+      console.log('[FeishuConnector] ✅ 卡片回调处理器已注册');
+    } catch (error) {
+      console.warn('[FeishuConnector] ⚠️ 卡片回调处理器注册失败（可选功能）:', error);
+    }
     
     // 启动长连接
     this.wsClient.start({ eventDispatcher });

@@ -1,0 +1,146 @@
+{
+  "config": {
+    "wide_screen_mode": true
+  },
+  "header": {
+    "title": {
+      "tag": "plain_text",
+      "content": "📊 {{storeName}} 每日经营数据"
+    },
+    "template": "blue"
+  },
+  "elements": [
+    {
+      "tag": "div",
+      "text": {
+        "tag": "lark_md",
+        "content": "**日期：** {{date}}"
+      }
+    },
+    {
+      "tag": "column_set",
+      "flex_mode": "none",
+      "background_style": "default",
+      "columns": [
+        {
+          "tag": "column",
+          "width": "weighted",
+          "weight": 1,
+          "vertical_align": "top",
+          "elements": [
+            {
+              "tag": "div",
+              "text": {
+                "tag": "lark_md",
+                "content": "**营业数据**\n💰 营业额：{{revenue}}元\n📦 有效订单：{{validOrders}}单\n💵 单均实付：{{avgOrderValue}}元"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "column",
+          "width": "weighted",
+          "weight": 1,
+          "vertical_align": "top",
+          "elements": [
+            {
+              "tag": "div",
+              "text": {
+                "tag": "lark_md",
+                "content": "**流量数据**\n👀 曝光人数：{{exposure}}\n🚶 进店转化率：{{visitRate}}%\n🛒 下单转化率：{{orderRate}}%"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "hr"
+    },
+    {
+      "tag": "column_set",
+      "flex_mode": "none",
+      "background_style": "default",
+      "columns": [
+        {
+          "tag": "column",
+          "width": "weighted",
+          "weight": 1,
+          "vertical_align": "top",
+          "elements": [
+            {
+              "tag": "div",
+              "text": {
+                "tag": "lark_md",
+                "content": "**评价数据**\n⭐ 平均评分：{{rating}}分\n👍 好评数：{{goodReviews}}\n👎 差评数：{{badReviews}}"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "column",
+          "width": "weighted",
+          "weight": 1,
+          "vertical_align": "top",
+          "elements": [
+            {
+              "tag": "div",
+              "text": {
+                "tag": "lark_md",
+                "content": "**环比变化**\n{{revenueChange}}\n{{ordersChange}}\n{{ratingChange}}"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "hr"
+    },
+    {
+      "tag": "div",
+      "text": {
+        "tag": "lark_md",
+        "content": "**运营建议：**\n{{suggestions}}"
+      }
+    },
+    {
+      "tag": "action",
+      "actions": [
+        {
+          "tag": "button",
+          "text": {
+            "tag": "plain_text",
+            "content": "📊 查看详细数据"
+          },
+          "type": "primary",
+          "value": {
+            "action": "view_detail",
+            "store_id": "{{storeId}}"
+          }
+        },
+        {
+          "tag": "button",
+          "text": {
+            "tag": "plain_text",
+            "content": "🔄 重新采集"
+          },
+          "type": "default",
+          "value": {
+            "action": "recollect",
+            "store_id": "{{storeId}}"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "note",
+      "elements": [
+        {
+          "tag": "plain_text",
+          "content": "数据来源：饿了么/美团 | 采集时间：{{collectTime}}"
+        }
+      ]
+    }
+  ]
+}
