@@ -2,6 +2,7 @@ import type { FeishuIncomingMessage } from '../../../types/connector';
 
 export type LoginCommand =
   | { kind: 'start'; platform: string; storeName: string }
+  | { kind: 'link'; requestCode: string }
   | { kind: 'done'; requestCode: string }
   | { kind: 'cancel'; requestCode: string }
   | { kind: 'status'; requestCode: string };
@@ -28,6 +29,7 @@ export interface FeishuLoginCommandHandlerDeps {
     conversationType: 'p2p' | 'group';
   }): Promise<LoginRequestStartResult>;
   completeLogin?(input: { requestCode: string; requesterUserId: string; requesterOpenId?: string }): Promise<string>;
+  renewLoginLink?(input: { requestCode: string; requesterUserId: string; requesterOpenId?: string }): Promise<LoginRequestStartResult>;
   cancelLogin?(input: { requestCode: string; requesterUserId: string; requesterOpenId?: string }): Promise<string>;
   getLoginStatus?(input: { requestCode: string; requesterUserId: string; requesterOpenId?: string }): Promise<string>;
 }
@@ -36,6 +38,9 @@ export function parseLoginCommand(text: string): LoginCommand | null {
   const trimmed = text.trim();
   const start = trimmed.match(/^\/login\s+(\S+)\s+(.+)$/);
   if (start) return { kind: 'start', platform: start[1], storeName: start[2].trim() };
+
+  const link = trimmed.match(/^\/login-link\s+(\S+)$/);
+  if (link) return { kind: 'link', requestCode: link[1] };
 
   const done = trimmed.match(/^\/login-done\s+(\S+)$/);
   if (done) return { kind: 'done', requestCode: done[1] };
@@ -62,8 +67,19 @@ export function formatLoginRequestPrivateMessage(input: {
     '登录请求 10 分钟后过期。',
     input.requestCode ? `登录码：${input.requestCode}` : undefined,
     `远程协助链接：${input.remoteAssistUrl}`,
+    input.requestCode ? `如果远程页面提示无法连接服务器，回复 /login-link ${input.requestCode} 重新生成链接。` : undefined,
     '完成登录后回复 /login-done <登录码>。',
   ].filter(Boolean).join('\n');
+}
+
+export function formatLoginLinkRenewedMessage(input: LoginRequestStartResult): string {
+  return [
+    '远程协助链接已刷新。',
+    `登录码：${input.requestCode}`,
+    `远程协助链接：${input.remoteAssistUrl}`,
+    `如果再次断开，回复 /login-link ${input.requestCode} 重新生成链接。`,
+    '完成登录后回复 /login-done <登录码>。',
+  ].join('\n');
 }
 
 function formatError(error: unknown): string {
@@ -122,6 +138,31 @@ export class FeishuLoginCommandHandler {
           remoteAssistUrl: login.remoteAssistUrl,
           requestCode: login.requestCode,
         }),
+      });
+      return true;
+    }
+
+    if (command.kind === 'link' && this.deps.renewLoginLink) {
+      let login: LoginRequestStartResult;
+      try {
+        login = await this.deps.renewLoginLink({
+          requestCode: command.requestCode,
+          requesterUserId: message.sender.id,
+          requesterOpenId: openId,
+        });
+      } catch (error) {
+        await this.deps.sendMessage({
+          conversationId: privateTarget,
+          _receiveIdType: receiveIdType,
+          content: `远程协助链接刷新失败：${formatError(error)}`,
+        });
+        return true;
+      }
+
+      await this.deps.sendMessage({
+        conversationId: privateTarget,
+        _receiveIdType: receiveIdType,
+        content: formatLoginLinkRenewedMessage(login),
       });
       return true;
     }

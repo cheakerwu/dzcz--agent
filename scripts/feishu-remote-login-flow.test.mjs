@@ -17,12 +17,14 @@ const { BrowserActControlService } = require('../dist-electron/main/browser-act/
 const { FeishuLoginCommandHandler } = require('../dist-electron/main/connectors/feishu/login-command-handler.js');
 const {
   startBrowserActLoginRequest,
+  renewBrowserActLoginLink,
   completeBrowserActLoginRequest,
 } = require('../dist-electron/main/connectors/feishu/browser-act-login-flow.js');
 
 class FakeBrowserActRunner {
   constructor() {
     this.calls = [];
+    this.remoteAssistCount = 0;
   }
 
   async run(args) {
@@ -31,7 +33,8 @@ class FakeBrowserActRunner {
       return 'id=chrome_mt name="meituan-merchant" type=chrome state=idle\n  desc="望京店 美团商家后台"';
     }
     if (args.includes('remote-assist')) {
-      return 'Remote assist URL: https://assist.browseract.local/session/login_req_flow';
+      this.remoteAssistCount += 1;
+      return `Remote assist URL: https://assist.browseract.local/session/login_req_flow_${this.remoteAssistCount}`;
     }
     if (args[0] === '--session' && args[2] === 'eval' && args[3] === 'location.href') {
       return 'https://ecom.meituan.com/shop/dashboard';
@@ -90,6 +93,14 @@ test('feishu remote assist login flow registers a verified browser-act profile w
         input,
         actorId: 'flow-test',
       }),
+      renewLoginLink: (input) => renewBrowserActLoginLink({
+        service,
+        browserAct,
+        requestCode: input.requestCode,
+        requesterUserId: input.requesterUserId,
+        requesterOpenId: input.requesterOpenId,
+        actorId: 'flow-test',
+      }),
       completeLogin: (input) => completeBrowserActLoginRequest({
         service,
         browserAct,
@@ -116,13 +127,29 @@ test('feishu remote assist login flow registers a verified browser-act profile w
     assert.equal(sentMessages[0]._receiveIdType, 'open_id');
     assert.match(sentMessages[0].content, /只发给你本人/);
     assert.match(sentMessages[0].content, /10 分钟/);
-    assert.match(sentMessages[0].content, /https:\/\/assist\.browseract\.local\/session\/login_req_flow/);
+    assert.match(sentMessages[0].content, /https:\/\/assist\.browseract\.local\/session\/login_req_flow_1/);
+    assert.match(sentMessages[0].content, /\/login-link/);
 
     const loginRequest = service.listBrowserLoginRequests()[0];
     assert.equal(loginRequest.status, 'waiting_employee_login');
     assert.equal(loginRequest.platformAccountId, platformAccount.id);
     assert.equal(loginRequest.browserActBrowserId, 'chrome_mt');
     assert.equal(loginRequest.expiresAt - loginRequest.createdAt, 10 * 60 * 1000);
+
+    const renewed = await handler.handle(
+      { kind: 'link', requestCode: loginRequest.id },
+      {
+        sender: { id: 'ou_1', name: '小王' },
+        conversation: { id: 'oc_group_1', type: 'group' },
+        content: { type: 'text', text: `/login-link ${loginRequest.id}` },
+        raw: { sender: { sender_id: { open_id: 'ou_open_1' } } },
+      },
+    );
+
+    assert.equal(renewed, true);
+    assert.equal(sentMessages.length, 2);
+    assert.match(sentMessages[1].content, /已刷新/);
+    assert.match(sentMessages[1].content, /https:\/\/assist\.browseract\.local\/session\/login_req_flow_2/);
 
     const completed = await handler.handle(
       { kind: 'done', requestCode: loginRequest.id },
@@ -135,8 +162,8 @@ test('feishu remote assist login flow registers a verified browser-act profile w
     );
 
     assert.equal(completed, true);
-    assert.equal(sentMessages.length, 2);
-    assert.match(sentMessages[1].content, /登录态已登记/);
+    assert.equal(sentMessages.length, 3);
+    assert.match(sentMessages[2].content, /登录态已登记/);
 
     const healthyRequest = service.getBrowserLoginRequest(loginRequest.id);
     assert.equal(healthyRequest.status, 'healthy');
@@ -151,6 +178,7 @@ test('feishu remote assist login flow registers a verified browser-act profile w
       runner.calls.some((args) => args.join(' ') === `session close ${loginRequest.sessionName}`),
       'successful login completion should close the browser-act session',
     );
+    assert.equal(runner.remoteAssistCount, 2);
 
     const promptContext = service.buildPromptContextForConnectorSession({
       connectorId: 'feishu',

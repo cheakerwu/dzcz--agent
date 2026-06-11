@@ -94,6 +94,8 @@ export async function completeBrowserActLoginRequest(options: {
   actorId?: string;
 }): Promise<string> {
   const { service, browserAct, requestCode, requesterUserId, requesterOpenId, actorId = 'feishu-login' } = options;
+  service.ensureSchema();
+  service.expireBrowserLoginRequests();
   const request = getLoginRequest(service, requestCode, requesterUserId, requesterOpenId);
   if (request.status === 'expired') throw new Error('登录请求已过期，请重新发起 /login');
   if (!request.browserActBrowserId) throw new Error('登录请求还没有绑定 browser-act 浏览器');
@@ -128,6 +130,37 @@ export async function completeBrowserActLoginRequest(options: {
   return `登录态已登记：${profile.label}。后台只保存 browser-act 引用，不保存 cookie、密码或验证码。`;
 }
 
+export async function renewBrowserActLoginLink(options: {
+  service: AdminControlPlaneService;
+  browserAct: BrowserActControlService;
+  requestCode: string;
+  requesterUserId: string;
+  requesterOpenId?: string;
+  actorId?: string;
+}): Promise<LoginRequestStartResult> {
+  const { service, browserAct, requestCode, requesterUserId, requesterOpenId, actorId = 'feishu-login' } = options;
+  service.ensureSchema();
+  service.expireBrowserLoginRequests();
+
+  const request = getLoginRequest(service, requestCode, requesterUserId, requesterOpenId);
+  if (request.status === 'expired') throw new Error('登录请求已过期，请重新发起 /login');
+  if (request.status === 'cancelled') throw new Error('登录请求已取消，请重新发起 /login');
+  if (request.status === 'failed') throw new Error('登录请求已失败，请重新发起 /login');
+  if (request.status === 'healthy') throw new Error('登录态已登记，无需刷新远程协助链接');
+  if (!request.browserActBrowserId) throw new Error('登录请求还没有打开浏览器，请重新发起 /login');
+
+  const remoteAssistUrl = await browserAct.createRemoteAssist({
+    sessionName: request.sessionName,
+    objective: `请继续完成${request.platform}商家后台登录。不要分享密码、验证码或 cookie 给任何人。`,
+  });
+  service.markBrowserLoginRequestWaiting(request.id, request.browserActBrowserId, actorId);
+  return {
+    requestCode: request.id,
+    expiresAt: request.expiresAt,
+    remoteAssistUrl,
+  };
+}
+
 export function cancelBrowserActLoginRequest(options: {
   service: AdminControlPlaneService;
   requestCode: string;
@@ -136,6 +169,8 @@ export function cancelBrowserActLoginRequest(options: {
   actorId?: string;
 }): string {
   const { service, requestCode, requesterUserId, requesterOpenId, actorId = 'feishu-login' } = options;
+  service.ensureSchema();
+  service.expireBrowserLoginRequests();
   const request = getLoginRequest(service, requestCode, requesterUserId, requesterOpenId);
   service.markBrowserLoginRequestCancelled(request.id, actorId);
   return `已取消登录请求：${requestCode}`;
@@ -148,6 +183,8 @@ export function getBrowserActLoginStatus(options: {
   requesterOpenId?: string;
 }): string {
   const { service, requestCode, requesterUserId, requesterOpenId } = options;
+  service.ensureSchema();
+  service.expireBrowserLoginRequests();
   const request = getLoginRequest(service, requestCode, requesterUserId, requesterOpenId);
   return `登录请求 ${requestCode} 当前状态：${request.status}，过期时间：${new Date(request.expiresAt).toLocaleString()}`;
 }

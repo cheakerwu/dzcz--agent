@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const {
   parseLoginCommand,
+  formatLoginLinkRenewedMessage,
   formatLoginRequestPrivateMessage,
   FeishuLoginCommandHandler,
 } = require('../dist-electron/main/connectors/feishu/login-command-handler.js');
@@ -18,6 +19,10 @@ test('feishu login command parser recognizes login lifecycle commands', () => {
   assert.equal(start.kind, 'start');
   assert.equal(start.platform, '美团');
   assert.equal(start.storeName, '望京店');
+
+  const link = parseLoginCommand('/login-link abc123');
+  assert.equal(link.kind, 'link');
+  assert.equal(link.requestCode, 'abc123');
 
   const done = parseLoginCommand('/login-done abc123');
   assert.equal(done.kind, 'done');
@@ -40,10 +45,24 @@ test('feishu login request private message keeps remote assist employee-only', (
     storeName: '望京店',
     expiresAt: new Date('2026-06-10T10:10:00.000Z').getTime(),
     remoteAssistUrl: 'https://assist.example/login',
+    requestCode: 'loginreq_1',
   });
   assert.match(privateMessage, /只发给你本人/);
   assert.match(privateMessage, /10 分钟/);
   assert.match(privateMessage, /https:\/\/assist\.example\/login/);
+  assert.match(privateMessage, /\/login-link/);
+});
+
+test('feishu login renewed-link message gives recovery command', () => {
+  const message = formatLoginLinkRenewedMessage({
+    requestCode: 'loginreq_1',
+    expiresAt: Date.now() + 10 * 60 * 1000,
+    remoteAssistUrl: 'https://assist.example/refreshed',
+  });
+  assert.match(message, /已刷新/);
+  assert.match(message, /loginreq_1/);
+  assert.match(message, /https:\/\/assist\.example\/refreshed/);
+  assert.match(message, /\/login-link loginreq_1/);
 });
 
 test('feishu login handler sends remote assist links through open_id private message', async () => {
@@ -74,6 +93,37 @@ test('feishu login handler sends remote assist links through open_id private mes
   assert.equal(sentMessages[0].conversationId, 'ou_open_1');
   assert.equal(sentMessages[0]._receiveIdType, 'open_id');
   assert.match(sentMessages[0].content, /只发给你本人/);
+});
+
+test('feishu login handler refreshes remote assist link through open_id private message', async () => {
+  const sentMessages = [];
+  const handler = new FeishuLoginCommandHandler({
+    sendMessage: async (message) => {
+      sentMessages.push(message);
+    },
+    renewLoginLink: async () => ({
+      requestCode: 'loginreq_1',
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      remoteAssistUrl: 'https://assist.example/refreshed',
+    }),
+  });
+
+  const handled = await handler.handle(
+    { kind: 'link', requestCode: 'loginreq_1' },
+    {
+      sender: { id: 'ou_1', name: '小王' },
+      conversation: { id: 'oc_group_1', type: 'group' },
+      content: { type: 'text', text: '/login-link loginreq_1' },
+      raw: { sender: { sender_id: { open_id: 'ou_open_1' } } },
+    },
+  );
+
+  assert.equal(handled, true);
+  assert.equal(sentMessages.length, 1);
+  assert.equal(sentMessages[0].conversationId, 'ou_open_1');
+  assert.equal(sentMessages[0]._receiveIdType, 'open_id');
+  assert.match(sentMessages[0].content, /已刷新/);
+  assert.match(sentMessages[0].content, /https:\/\/assist\.example\/refreshed/);
 });
 
 test('feishu login platform resolver only enables meituan in the first rollout', () => {

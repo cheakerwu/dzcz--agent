@@ -30,6 +30,7 @@ import {
   cancelBrowserActLoginRequest,
   completeBrowserActLoginRequest,
   getBrowserActLoginStatus,
+  renewBrowserActLoginLink,
   startBrowserActLoginRequest,
   type FeishuRemoteLoginStartInput,
 } from './browser-act-login-flow';
@@ -113,6 +114,7 @@ export class FeishuConnector implements Connector {
       sendMessage: (input) => this.outbound.sendMessage(input),
       startLogin: (input) => this.startBrowserActLogin(input),
       completeLogin: (input) => this.completeBrowserActLogin(input.requestCode, input.requesterUserId, input.requesterOpenId),
+      renewLoginLink: (input) => this.renewBrowserActLoginLink(input.requestCode, input.requesterUserId, input.requesterOpenId),
       cancelLogin: (input) => this.cancelBrowserActLogin(input.requestCode, input.requesterUserId, input.requesterOpenId),
       getLoginStatus: (input) => this.getBrowserActLoginStatus(input.requestCode, input.requesterUserId, input.requesterOpenId),
     });
@@ -294,6 +296,17 @@ export class FeishuConnector implements Connector {
 
   private async completeBrowserActLogin(requestCode: string, requesterUserId: string, requesterOpenId?: string): Promise<string> {
     return completeBrowserActLoginRequest({
+      service: this.getAdminControlPlaneService(),
+      browserAct: this.createBrowserActControlService(),
+      requestCode,
+      requesterUserId,
+      requesterOpenId,
+      actorId: 'feishu-login',
+    });
+  }
+
+  private async renewBrowserActLoginLink(requestCode: string, requesterUserId: string, requesterOpenId?: string) {
+    return renewBrowserActLoginLink({
       service: this.getAdminControlPlaneService(),
       browserAct: this.createBrowserActControlService(),
       requestCode,

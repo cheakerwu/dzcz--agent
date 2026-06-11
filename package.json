@@ -19,7 +19,7 @@
     "type-check": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "type-check:server": "tsc -p tsconfig.server.json --noEmit",
     "test:admin-memory": "node scripts/admin-control-plane-service.test.mjs && node scripts/admin-control-plane-prompt.test.mjs && node scripts/admin-control-plane-route.test.mjs",
-    "test:remote-login": "node scripts/browser-act-control-service.test.mjs && node scripts/feishu-login-command-handler.test.mjs && node scripts/feishu-remote-login-flow.test.mjs",
+    "test:remote-login": "pnpm run build:main && node scripts/browser-act-control-service.test.mjs && node scripts/feishu-login-command-handler.test.mjs && node scripts/feishu-remote-login-flow.test.mjs",
     "lint": "eslint . --ext .ts,.tsx",
     "postinstall": "electron-builder install-app-deps",
     "pack": "pnpm run build && electron-builder --dir",
