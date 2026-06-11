@@ -1,12 +1,23 @@
 /**
  * Local Agent Terminal 主进程入口
- * 
+ *
  * 职责：
  * - 创建 Electron 窗口
  * - 初始化 Gateway
  * - 管理应用生命周期
  * - 系统托盘管理
  */
+
+// 处理 stdout/stderr 管道断开（EPIPE）错误
+// Electron 在某些终端环境下 stdout 会被关闭，导致 console.log 抛出未捕获异常
+process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') return; // 静默忽略
+  throw err;
+});
+process.stderr.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') return; // 静默忽略
+  throw err;
+});
 
 // Polyfill for undici in Electron main process
 // undici 需要 File API，但 Electron 主进程中没有，所以需要 polyfill
