@@ -72,6 +72,17 @@ export async function handleCardCallback(
 
   try {
     switch (action) {
+      case 'feishu_task_progress_status':
+      case 'feishu_task_progress_stop': {
+        if (!gatewayInstance) {
+          return { replyMessage: '系统还没有准备好处理任务卡片，请稍后再试。' };
+        }
+
+        const tabId = callbackData.tab_id || callbackData.tabId;
+        const replyMessage = await gatewayInstance.handleFeishuProgressCardAction(action, tabId);
+        return { replyMessage };
+      }
+
       case 'view_detail': {
         // 查看详细数据 - 触发 Agent 生成详细报告
         if (store_id && gatewayInstance) {

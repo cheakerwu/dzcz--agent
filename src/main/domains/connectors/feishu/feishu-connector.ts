@@ -715,6 +715,81 @@ export class FeishuConnector implements Connector {
         throw error;
       }
     },
+
+    sendInteractiveCard: async (params: {
+      conversationId: string;
+      card: Record<string, any>;
+      replyToMessageId?: string;
+      /** 接收者 ID 类型，默认 chat_id，指定 open_id 时直接发给用户 */
+      _receiveIdType?: 'chat_id' | 'open_id';
+    }): Promise<{ messageId?: string }> => {
+      const receiveIdType = params._receiveIdType ?? 'chat_id';
+      const content = JSON.stringify(params.card);
+
+      try {
+        let res: any;
+
+        if (params.replyToMessageId && receiveIdType === 'chat_id') {
+          res = await this.client.im.message.reply({
+            path: {
+              message_id: params.replyToMessageId,
+            },
+            data: {
+              content,
+              msg_type: 'interactive',
+              reply_in_thread: false,
+            },
+          });
+        } else {
+          res = await this.client.im.message.create({
+            params: {
+              receive_id_type: receiveIdType,
+            },
+            data: {
+              receive_id: params.conversationId,
+              msg_type: 'interactive',
+              content,
+            },
+          });
+        }
+
+        if (res && typeof res === 'object' && 'code' in res && res.code !== 0) {
+          const errorMsg = res.msg || res.message || '未知错误';
+          throw new Error(`发送交互卡片失败: ${errorMsg}`);
+        }
+
+        return {
+          messageId: res?.data?.message_id || res?.message_id,
+        };
+      } catch (error) {
+        console.error('[FeishuConnector] ❌ 发送交互卡片失败:', error);
+        throw error;
+      }
+    },
+
+    updateInteractiveCard: async (params: {
+      messageId: string;
+      card: Record<string, any>;
+    }): Promise<void> => {
+      try {
+        const res: any = await this.client.im.message.patch({
+          path: {
+            message_id: params.messageId,
+          },
+          data: {
+            content: JSON.stringify(params.card),
+          },
+        });
+
+        if (res && typeof res === 'object' && 'code' in res && res.code !== 0) {
+          const errorMsg = res.msg || res.message || '未知错误';
+          throw new Error(`更新交互卡片失败: ${errorMsg}`);
+        }
+      } catch (error) {
+        console.error('[FeishuConnector] ❌ 更新交互卡片失败:', error);
+        throw error;
+      }
+    },
     
     sendImage: async (params: {
       conversationId: string;

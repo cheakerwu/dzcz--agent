@@ -178,6 +178,10 @@ export class Gateway {
     const { setGatewayForCrossTabCallTool } = require('../../domains/tools/cross-tab-call-tool');
     setGatewayForCrossTabCallTool(this);
     console.info('[Gateway] Gateway 实例已传递给 Cross Tab Call Tool');
+
+    const { setGatewayForCardCallback } = require('../../domains/tools/feishu-card-callback');
+    setGatewayForCardCallback(this);
+    console.info('[Gateway] Gateway 实例已传递给 Feishu Card Callback');
     
     // 创建默认 Tab
     this.tabManager.createDefaultTab();
@@ -839,6 +843,13 @@ export class Gateway {
    */
   async sendResponseToConnector(tabId: string, response: string): Promise<void> {
     await this.connectorHandler.sendResponseToConnector(tabId, response);
+  }
+
+  /**
+   * 处理飞书进度卡片按钮动作
+   */
+  async handleFeishuProgressCardAction(action: string, tabId?: string): Promise<string> {
+    return await this.connectorHandler.handleFeishuProgressCardAction(action, tabId);
   }
 
   /**

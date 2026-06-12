@@ -205,6 +205,72 @@ export class ConnectorManager {
       throw error;
     }
   }
+
+  /**
+   * 发送交互卡片到外部连接器（目前主要用于飞书）
+   */
+  async sendInteractiveCard(
+    connectorId: ConnectorId,
+    conversationId: string,
+    card: Record<string, any>,
+    replyToMessageId?: string
+  ): Promise<{ messageId?: string }> {
+    const connector = this.connectors.get(connectorId);
+    if (!connector) {
+      throw new Error(`连接器不存在: ${connectorId}`);
+    }
+
+    if (!connector.outbound.sendInteractiveCard) {
+      throw new Error(`连接器不支持交互卡片: ${connectorId}`);
+    }
+
+    console.log(`[ConnectorManager] 发送交互卡片到外部: ${connectorId}`, {
+      conversationId,
+      replyToMessageId,
+    });
+
+    try {
+      const result = await connector.outbound.sendInteractiveCard({
+        conversationId,
+        card,
+        replyToMessageId,
+      });
+
+      console.log(`[ConnectorManager] ✅ 交互卡片已发送`);
+      return result;
+    } catch (error) {
+      console.error(`[ConnectorManager] ❌ 发送交互卡片失败:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 更新已发送的交互卡片
+   */
+  async updateInteractiveCard(
+    connectorId: ConnectorId,
+    messageId: string,
+    card: Record<string, any>
+  ): Promise<void> {
+    const connector = this.connectors.get(connectorId);
+    if (!connector) {
+      throw new Error(`连接器不存在: ${connectorId}`);
+    }
+
+    if (!connector.outbound.updateInteractiveCard) {
+      throw new Error(`连接器不支持更新交互卡片: ${connectorId}`);
+    }
+
+    console.log(`[ConnectorManager] 更新交互卡片: ${connectorId}`, { messageId });
+
+    try {
+      await connector.outbound.updateInteractiveCard({ messageId, card });
+      console.log(`[ConnectorManager] ✅ 交互卡片已更新`);
+    } catch (error) {
+      console.error(`[ConnectorManager] ❌ 更新交互卡片失败:`, error);
+      throw error;
+    }
+  }
   
   /**
    * 发送图片到外部（由 Gateway 或 Tool 调用）

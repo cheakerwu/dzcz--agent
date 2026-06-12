@@ -114,6 +114,18 @@ export interface Connector {
       fileName?: string;
       replyToMessageId?: string;  // 飞书 reply API 需要的 message_id
     }): Promise<void>;
+
+    sendInteractiveCard?(params: {
+      conversationId: string;
+      card: Record<string, any>;
+      replyToMessageId?: string;
+      _receiveIdType?: 'chat_id' | 'open_id';
+    }): Promise<{ messageId?: string }>;
+
+    updateInteractiveCard?(params: {
+      messageId: string;
+      card: Record<string, any>;
+    }): Promise<void>;
   };
   
   // ========== 安全控制 ==========

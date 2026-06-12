@@ -26,6 +26,12 @@ import type { GatewayTabManager } from './gateway-tab';
 import { setCurrentSenderIdForFeishuDocTool } from '../../domains/tools/feishu-doc-tool';
 import { getGatewayInstance } from './gateway';
 import { SESSION_STOP_BOUNDARY_MARKER } from '../../domains/agent-runtime/session-boundary';
+import {
+  buildFeishuTaskProgressCard,
+  sanitizeFeishuTaskTitle,
+  summarizeFeishuTaskProgress,
+  type FeishuTaskProgressStatus,
+} from '../../domains/connectors/feishu/progress-card';
 
 const logger = createLogger('ConnectorHandler');
 
@@ -56,6 +62,14 @@ export class GatewayConnectorHandler {
 
   // 每个 tabId 对应的进度提醒定时器列表
   private progressTimers: Map<string, ReturnType<typeof setTimeout>[]> = new Map();
+
+  // 每个 tabId 对应的飞书进度卡片状态
+  private progressCards: Map<string, {
+    messageId: string;
+    startedAt: number;
+    taskTitle: string;
+    replyToMessageId?: string;
+  }> = new Map();
 
   // 回调函数
   private handleSendMessageFn: ((content: string, sessionId?: string, displayContent?: string, clearHistory?: boolean, skipHistory?: boolean) => Promise<void>) | null = null;
@@ -281,7 +295,7 @@ export class GatewayConnectorHandler {
             const statusResult = await this.handleStatusCommand(tab.id);
             if (tab.type === 'connector') {
               try {
-                await this.sendResponseToConnector(tab.id, statusResult);
+                await this.sendResponseToConnector(tab.id, statusResult, true);
               } catch (replyError) {
                 logger.error('❌ 回复 status 指令结果失败:', replyError);
               }
@@ -608,7 +622,8 @@ export class GatewayConnectorHandler {
         }
       } else {
         // Agent 模式：正常处理
-        // 启动进度提醒定时器
+        // 启动进度提醒卡片/定时器
+        await this.startProgressCard(tabId, message);
         this.startProgressTimers(tabId);
 
         // 发送给 agent 处理
@@ -621,6 +636,9 @@ export class GatewayConnectorHandler {
       
       // 清除进度提醒定时器
       this.clearProgressTimers(tabId);
+      await this.finishProgressCard(tabId, 'failed', {
+        statusText: `处理失败：${getErrorMessage(error)}`,
+      });
       
       // 向连接器用户发送错误提示
       try {
@@ -713,6 +731,9 @@ export class GatewayConnectorHandler {
       // 只有真实 agent 回复才清除定时器，进度提醒本身不触发清除
       if (!isProgressNotice) {
         this.clearProgressTimers(tabId);
+        await this.finishProgressCard(tabId, 'completed', {
+          statusText: '结果已发送到当前会话',
+        });
       }
     } catch (error) {
       logger.error('❌ 发送响应到连接器失败:', error);
@@ -905,6 +926,9 @@ export class GatewayConnectorHandler {
 
     // 3. 清除进度提醒定时器
     this.clearProgressTimers(sessionId);
+    await this.finishProgressCard(sessionId, 'stopped', {
+      statusText: '用户已停止当前任务',
+    });
 
     if (this.sessionManager) {
       await this.sessionManager.saveSystemMessage(sessionId, SESSION_STOP_BOUNDARY_MARKER);
@@ -993,6 +1017,25 @@ export class GatewayConnectorHandler {
       logger.error('❌ 执行 /status 指令失败:', error);
       return `❌ 获取状态失败: ${getErrorMessage(error)}`;
     }
+  }
+
+  /**
+   * 处理飞书进度卡片按钮动作
+   */
+  async handleFeishuProgressCardAction(action: string, tabId?: string): Promise<string> {
+    if (!tabId) {
+      return '未找到对应任务会话。';
+    }
+
+    if (action === 'feishu_task_progress_stop') {
+      return await this.handleStopCommand(tabId);
+    }
+
+    if (action === 'feishu_task_progress_status') {
+      return await this.handleStatusCommand(tabId);
+    }
+
+    return `未知进度卡片操作: ${action}`;
   }
 
   /**
@@ -1295,8 +1338,13 @@ Use the file_read tool to read the file content.`
         const msg = PROGRESS_MESSAGES[ms];
         logger.info(`⏳ 进度提醒触发 [${ms / 1000}s]: ${tabId}`);
         try {
-          await this.sendResponseToConnector(tabId, msg, true);
-          logger.info(`✅ 进度提醒已发送 [${ms / 1000}s]: ${tabId}`);
+          const refreshed = await this.refreshProgressCard(tabId);
+          if (!refreshed) {
+            await this.sendResponseToConnector(tabId, msg, true);
+            logger.info(`✅ 文本进度提醒已发送 [${ms / 1000}s]: ${tabId}`);
+          } else {
+            logger.info(`✅ 进度卡片已刷新 [${ms / 1000}s]: ${tabId}`);
+          }
         } catch (error) {
           logger.error(`❌ 发送进度提醒失败 [${ms / 1000}s]:`, error);
         }
@@ -1307,6 +1355,162 @@ Use the file_read tool to read the file content.`
 
     this.progressTimers.set(tabId, timers);
     logger.info(`✅ 已启动 ${timers.length} 个进度提醒定时器: ${tabId}`);
+  }
+
+  /**
+   * 启动飞书进度卡片。非飞书连接器会静默降级到原文本提醒。
+   */
+  private async startProgressCard(tabId: string, message: {
+    content: string;
+    displayContent?: string;
+    replyToMessageId?: string;
+  }): Promise<void> {
+    if (!this.tabManager || !this.connectorManager) return;
+
+    const tab = this.tabManager.getTab(tabId);
+    if (!tab || tab.type !== 'connector' || tab.connectorId !== 'feishu' || !tab.conversationId) {
+      return;
+    }
+
+    const taskTitle = sanitizeFeishuTaskTitle(message.displayContent || message.content);
+    const startedAt = Date.now();
+    const card = buildFeishuTaskProgressCard({
+      taskTitle,
+      status: 'running',
+      statusText: '任务已接收，正在准备执行',
+      elapsedMs: 0,
+      tabId,
+    });
+
+    try {
+      const result = await this.connectorManager.sendInteractiveCard(
+        tab.connectorId,
+        tab.conversationId,
+        card,
+        message.replyToMessageId
+      );
+
+      if (result?.messageId) {
+        this.progressCards.set(tabId, {
+          messageId: result.messageId,
+          startedAt,
+          taskTitle,
+          replyToMessageId: message.replyToMessageId,
+        });
+      }
+    } catch (error) {
+      logger.warn('⚠️ 飞书进度卡片发送失败，降级为文本提醒:', error);
+    }
+  }
+
+  /**
+   * 刷新飞书进度卡片。
+   */
+  private async refreshProgressCard(tabId: string): Promise<boolean> {
+    const cardState = this.progressCards.get(tabId);
+    if (!cardState || !this.tabManager || !this.connectorManager) {
+      return false;
+    }
+
+    const tab = this.tabManager.getTab(tabId);
+    if (!tab?.connectorId) {
+      return false;
+    }
+
+    let summary = {
+      statusText: '任务仍在执行中',
+      completedStepCount: 0,
+      runningStepNames: [] as string[],
+      recentStepNames: [] as string[],
+    };
+
+    if (this.getOrCreateRuntimeFn) {
+      try {
+        const runtime = this.getOrCreateRuntimeFn(tabId);
+        summary = summarizeFeishuTaskProgress({
+          streamingContent: runtime.getCurrentStreamingContent?.(),
+          steps: runtime.getExecutionSteps?.() || [],
+        });
+      } catch (error) {
+        logger.warn('⚠️ 获取运行时进度失败:', error);
+      }
+    }
+
+    const card = buildFeishuTaskProgressCard({
+      taskTitle: cardState.taskTitle,
+      status: 'running',
+      statusText: summary.statusText,
+      elapsedMs: Date.now() - cardState.startedAt,
+      completedStepCount: summary.completedStepCount,
+      runningStepNames: summary.runningStepNames,
+      recentStepNames: summary.recentStepNames,
+      tabId,
+    });
+
+    await this.connectorManager.updateInteractiveCard(tab.connectorId, cardState.messageId, card);
+    return true;
+  }
+
+  /**
+   * 结束飞书进度卡片。
+   */
+  private async finishProgressCard(
+    tabId: string,
+    status: Extract<FeishuTaskProgressStatus, 'completed' | 'failed' | 'stopped'>,
+    options: { statusText: string }
+  ): Promise<void> {
+    const cardState = this.progressCards.get(tabId);
+    if (!cardState || !this.tabManager || !this.connectorManager) {
+      return;
+    }
+
+    const tab = this.tabManager.getTab(tabId);
+    if (!tab?.connectorId) {
+      this.progressCards.delete(tabId);
+      return;
+    }
+
+    let summary = {
+      completedStepCount: 0,
+      runningStepNames: [] as string[],
+      recentStepNames: [] as string[],
+    };
+
+    if (this.getOrCreateRuntimeFn) {
+      try {
+        const runtime = this.getOrCreateRuntimeFn(tabId);
+        const runtimeSummary = summarizeFeishuTaskProgress({
+          streamingContent: runtime.getCurrentStreamingContent?.(),
+          steps: runtime.getExecutionSteps?.() || [],
+        });
+        summary = {
+          completedStepCount: runtimeSummary.completedStepCount,
+          runningStepNames: status === 'completed' ? [] : runtimeSummary.runningStepNames,
+          recentStepNames: runtimeSummary.recentStepNames,
+        };
+      } catch (error) {
+        logger.warn('⚠️ 获取最终运行时进度失败:', error);
+      }
+    }
+
+    const card = buildFeishuTaskProgressCard({
+      taskTitle: cardState.taskTitle,
+      status,
+      statusText: options.statusText,
+      elapsedMs: Date.now() - cardState.startedAt,
+      completedStepCount: summary.completedStepCount,
+      runningStepNames: summary.runningStepNames,
+      recentStepNames: summary.recentStepNames,
+      tabId,
+    });
+
+    try {
+      await this.connectorManager.updateInteractiveCard(tab.connectorId, cardState.messageId, card);
+    } catch (error) {
+      logger.warn('⚠️ 飞书进度卡片更新失败:', error);
+    } finally {
+      this.progressCards.delete(tabId);
+    }
   }
 
   /**
