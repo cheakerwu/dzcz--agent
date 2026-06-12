@@ -7,11 +7,11 @@ const {
   parseLoginCommand,
   formatLoginRequestPrivateMessage,
   FeishuLoginCommandHandler,
-} = require('../dist-electron/main/connectors/feishu/login-command-handler.js');
+} = require('../dist-electron/main/domains/connectors/feishu/login-command-handler.js');
 const {
   resolveMerchantLoginPlatform,
   selectBrowserActBrowserForLogin,
-} = require('../dist-electron/main/connectors/feishu/login-platforms.js');
+} = require('../dist-electron/main/domains/connectors/feishu/login-platforms.js');
 
 test('feishu login command parser recognizes login lifecycle commands', () => {
   const start = parseLoginCommand('/login 美团 望京店');

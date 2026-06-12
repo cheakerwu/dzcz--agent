@@ -12,7 +12,7 @@ const root = process.cwd();
 execFileSync('pnpm', ['run', 'build:main'], { cwd: root, stdio: 'inherit' });
 
 const { default: Database } = require('../dist-electron/shared/utils/sqlite-adapter.js');
-const { AdminControlPlaneService } = require('../dist-electron/main/admin-control-plane/service.js');
+const { AdminControlPlaneService } = require('../dist-electron/main/domains/admin-control-plane/service.js');
 
 test('prompt context excludes browser secrets and only includes active scoped memory', () => {
   const dir = mkdtempSync(join(tmpdir(), 'dianbot-admin-prompt-'));
@@ -80,6 +80,7 @@ test('prompt context excludes browser secrets and only includes active scoped me
       connectorId: 'feishu',
       conversationId: 'oc_2',
     });
+    assert.match(context, /### 群聊记忆/);
     assert.match(context, /万达店周三主推套餐 A/);
     assert.doesNotMatch(context, /归档记忆/);
     assert.doesNotMatch(context, /token=abc123/);

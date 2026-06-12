@@ -7,17 +7,17 @@ const {
   parseBrowserActBrowserList,
   parseBrowserActProfileList,
   extractRemoteAssistUrl,
-} = require('../dist-electron/main/browser-act/browser-act-parser.js');
+} = require('../dist-electron/main/domains/browser-act/browser-act-parser.js');
 
 const {
   BrowserActControlService,
   classifyRiskAccount,
-} = require('../dist-electron/main/browser-act/browser-act-control-service.js');
+} = require('../dist-electron/main/domains/browser-act/browser-act-control-service.js');
 
 const {
   verifyMeituanMerchantLogin,
   getLoginVerifier,
-} = require('../dist-electron/main/browser-act/browser-act-login-verifiers.js');
+} = require('../dist-electron/main/domains/browser-act/browser-act-login-verifiers.js');
 
 class FakeRunner {
   constructor() {

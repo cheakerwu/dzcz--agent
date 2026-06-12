@@ -1,8 +1,8 @@
 import { Router, RequestHandler } from 'express';
 import type { AdminActionRequest } from '../../types/admin-control-plane';
 import { getErrorMessage } from '../../shared/utils/error-handler';
-import { SystemConfigStore } from '../../main/database/system-config-store';
-import { dispatchAdminControlPlaneAction } from '../../main/admin-control-plane/actions';
+import { SystemConfigStore } from '../../main/infrastructure/database/system-config-store';
+import { dispatchAdminControlPlaneAction } from '../../main/domains/admin-control-plane/actions';
 
 export function createAdminControlPlaneRouter(): Router {
   const router = Router();

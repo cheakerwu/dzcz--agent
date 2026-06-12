@@ -5,8 +5,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const sourceDir = path.join(__dirname, '../src/main/prompts/templates');
-const targetDir = path.join(__dirname, '../dist-server/main/prompts/templates');
+const sourceDir = path.join(__dirname, '../src/main/domains/prompts/templates');
+const targetDir = path.join(__dirname, '../dist-server/main/domains/prompts/templates');
 
 // 确保目标目录存在
 if (!fs.existsSync(targetDir)) {

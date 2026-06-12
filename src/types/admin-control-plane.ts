@@ -1,7 +1,10 @@
 export type AdminRole = 'admin' | 'ops_lead' | 'operator' | 'viewer';
+export type CompanyStatus = 'active' | 'archived';
 export type StoreStatus = 'operating' | 'paused' | 'closed';
 export type EmployeeStatus = 'active' | 'transferred' | 'offboarded';
 export type ConversationStatus = 'active' | 'muted' | 'archived';
+export type ExternalStoreMappingStatus = 'active' | 'pending' | 'disabled';
+export type ConversationMemberStatus = 'active' | 'removed';
 export type MemoryScope = 'enterprise' | 'employee' | 'conversation' | 'store' | 'task';
 export type MemoryStatus = 'candidate' | 'pending_review' | 'active' | 'conflicted' | 'expired' | 'archived' | 'rejected';
 export type BrowserProfileStatus = 'healthy' | 'needs_reauth' | 'expired' | 'revoked' | 'locked' | 'unhealthy';
@@ -11,6 +14,8 @@ export type RiskAccountClass = 'standard' | 'sensitive' | 'high_risk' | 'critica
 export type AdminEntityType = 'store' | 'employee' | 'conversation' | 'platform_account' | 'browser_profile' | 'login_request' | 'task';
 export type AssignmentStatus = 'active' | 'revoked';
 export type ProviderSyncStatus = 'pending' | 'synced' | 'disabled' | 'error' | 'deleted';
+export type RuntimeMemoryScope = 'enterprise' | 'conversation' | 'employee';
+export type PolicyEffect = 'allow' | 'deny' | 'requires_confirmation';
 export type BrowserLoginRequestStatus =
   | 'pending_confirmation'
   | 'creating_browser'
@@ -30,6 +35,14 @@ export interface AdminActionResponse<TData = unknown> {
   success: boolean;
   data?: TData;
   error?: string;
+}
+
+export interface AdminCompany {
+  id: string;
+  name: string;
+  status: CompanyStatus;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface CreateStoreInput {
@@ -135,6 +148,38 @@ export interface ConversationStoreBinding {
   status: AssignmentStatus;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface UpsertExternalStoreMappingInput {
+  storeId: string;
+  platform: string;
+  sourceApp: string;
+  externalStoreId: string;
+  externalStoreName?: string;
+  accountRef?: string;
+  status?: ExternalStoreMappingStatus;
+}
+
+export interface StoreExternalIdMapping {
+  id: string;
+  storeId: string;
+  platform: string;
+  sourceApp: string;
+  externalStoreId: string;
+  externalStoreName?: string;
+  accountRef?: string;
+  status: ExternalStoreMappingStatus;
+  firstSeenAt: number;
+  lastSeenAt: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface UpsertConversationMemberInput {
+  conversationId: string;
+  employeeId: string;
+  role?: string;
+  status?: ConversationMemberStatus;
 }
 
 export interface MemoryEntityLinkInput {
@@ -312,6 +357,33 @@ export interface BrowserProfilePermission {
   status: AssignmentStatus;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface MemoryReadPolicyInput {
+  connectorId: string;
+  conversationId?: string;
+  actorUserId?: string;
+  actorEmployeeId?: string;
+  action?: string;
+  riskLevel?: RiskLevel;
+}
+
+export interface PolicyDecision {
+  effect: PolicyEffect;
+  reason: string;
+  companyId?: string;
+  actorEmployeeId?: string;
+  conversationInternalId?: string;
+  allowedStoreIds: string[];
+  allowedMemoryScopes: RuntimeMemoryScope[];
+  allowedBrowserProfileIds: string[];
+}
+
+export interface BuildMemoryGatewayPromptInput {
+  connectorId: string;
+  conversationId: string;
+  actorUserId?: string;
+  actorEmployeeId?: string;
 }
 
 export interface AdminProviderSyncState {

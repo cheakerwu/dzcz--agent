@@ -8,8 +8,8 @@ const fs = require('fs');
 const path = require('path');
 
 // 源目录和目标目录
-const sourceDir = path.join(__dirname, '../src/main/prompts/templates');
-const targetDir = path.join(__dirname, '../dist-electron/main/prompts/templates');
+const sourceDir = path.join(__dirname, '../src/main/domains/prompts/templates');
+const targetDir = path.join(__dirname, '../dist-electron/main/domains/prompts/templates');
 
 /**
  * 递归创建目录

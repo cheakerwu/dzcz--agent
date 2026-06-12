@@ -4,10 +4,10 @@ const {
   isBrowserActCoreGuideCommand,
   validateBrowserActArgs,
   truncateOutput,
-} = require('../dist-electron/main/tools/browser-act-command.js');
+} = require('../dist-electron/main/domains/tools/browser-act-command.js');
 const {
   browserActToolPlugin,
-} = require('../dist-electron/main/tools/browser-act-tool.js');
+} = require('../dist-electron/main/domains/tools/browser-act-tool.js');
 
 assert.equal(
   isBrowserActCoreGuideCommand(['get-skills', 'core', '--skill-version', '2.0.2']),

@@ -1,8 +1,10 @@
 # Feishu Layered Memory With mem0 Design
 
 Date: 2026-06-10
-Status: Proposed for implementation planning
+Status: Superseded by `docs/superpowers/specs/2026-06-12-policy-three-layer-memory-design.md`
 Owner: 点之出众 internal agent workspace
+
+Update on 2026-06-12: old Markdown memory is no longer a runtime fallback. It may only be used as an explicit admin-triggered migration source that creates structured `pending_review` memory candidates.
 
 ## Summary
 
@@ -26,7 +28,7 @@ The first implementation should use mem0 as the memory engine and keep 点之出
   - Employees can write their own personal memory.
   - Conversation and group memory can be written automatically for task context, with lifecycle controls.
 - Use mem0 for extraction, deduplication, semantic retrieval, entity-aware lookup, and memory scoring where available.
-- Keep existing Markdown memory behavior available as a fallback during migration.
+- Exclude old Markdown memory from runtime prompts; only allow explicit reviewed migration into structured memory.
 - Preserve local session history separately from long-term memory.
 
 ## Non-Goals
@@ -42,7 +44,7 @@ The first implementation should use mem0 as the memory engine and keep 点之出
 The current codebase already has useful integration points:
 
 - `src/main/tools/memory-tool.ts` manages Markdown memory files and exposes the `memory` tool.
-- `src/main/prompts/system-prompt.ts` calls `getMemoryContent(sessionId)` and injects one memory block into the system prompt.
+- Before the 2026-06-12 policy/memory-gateway change, `src/main/prompts/system-prompt.ts` called `getMemoryContent(sessionId)` and injected one memory block into the system prompt.
 - `src/main/gateway-connector.ts` receives connector messages, maps them to connector tabs, and has access to `connectorId`, `conversationId`, `senderId`, `senderName`, and `chatType`.
 - `src/main/connectors/connector-manager.ts` converts connector-specific messages into `GatewayMessage`.
 - `src/types/connector.ts` defines `GatewayMessage.source` with Feishu-compatible identity and conversation fields.
@@ -111,7 +113,7 @@ src/main/memory/
 `memory-provider.ts`
 
 - Defines provider interfaces for search, add, delete, and update.
-- Lets the app support mem0 and Markdown fallback behind one boundary.
+- Lets the app support structured SQLite memory and optional mem0 search behind one boundary.
 
 `mem0-provider.ts`
 
@@ -121,8 +123,8 @@ src/main/memory/
 
 `markdown-memory-provider.ts`
 
-- Keeps current Markdown memory behavior available for fallback and migration.
-- Reads existing `memory.md` and tab memory files through the same interface.
+- Superseded by the 2026-06-12 runtime decision.
+- Existing `memory.md` and tab memory files may only be read by an explicit migration importer.
 
 `layered-memory-service.ts`
 
@@ -479,7 +481,7 @@ This keeps current behavior stable until mem0 is configured.
 
 mem0 unavailable:
 
-- Continue answering with current session context and Markdown fallback if available.
+- Continue answering with current session context and structured SQLite memory if available.
 - Log the provider error.
 - Do not block Feishu replies.
 
@@ -507,11 +509,11 @@ Sensitive data detection:
 
 Replace the single `getMemoryContent(sessionId)` injection path with layered memory retrieval when a connector context is available.
 
-Fallback behavior:
+Runtime behavior:
 
-- UI/default tabs continue using existing Markdown memory until they are migrated.
-- Non-Feishu connectors can keep the current single-memory path.
-- Feishu connector tabs use layered memory when `memory_provider = "mem0"` and the provider is healthy.
+- UI/default tabs must not inject old Markdown as runtime memory.
+- Non-Feishu connectors can omit structured memory until their connector context is mapped.
+- Feishu connector tabs use structured three-layer memory from SQLite; mem0 is optional search infrastructure.
 
 Prompt cache impact:
 
@@ -523,15 +525,15 @@ Prompt cache impact:
 
 First migration behavior:
 
-1. Keep `memory.md` as Markdown fallback.
-2. Optionally import selected `memory.md` content into enterprise memory as admin-approved entries.
+1. Do not keep `memory.md` as runtime fallback.
+2. Optionally import selected `memory.md` content into `pending_review` structured memory candidates.
 3. Do not automatically split old Markdown memory into employee or conversation memories.
-4. New Feishu messages use layered memory after mem0 is enabled.
+4. New Feishu messages use structured layered memory after control-plane binding is available.
 
 Tab memory files:
 
 - Existing tab-specific Markdown memories remain readable.
-- Feishu layered memory does not depend on tab-specific Markdown memory files.
+- Feishu layered memory does not depend on tab-specific Markdown memory files and must not inject them at runtime.
 - Future implementation may offer a one-time import for important connector tab memories.
 
 ## Observability
@@ -594,7 +596,7 @@ Manual verification:
 Phase 1: Provider boundary and context plumbing
 
 - Add `src/main/memory/` interfaces and Feishu memory context.
-- Keep Markdown provider as fallback.
+- Keep old Markdown only as an explicit migration source.
 - Add mem0 provider configuration.
 - Do not change UI behavior.
 
@@ -614,7 +616,7 @@ Phase 3: Scoped writes and permissions
 
 Phase 4: Lifecycle and operations
 
-- Add TTL metadata and local decay fallback.
+- Add TTL metadata and local structured-memory decay behavior.
 - Add memory write logs.
 - Add promotion behavior from conversation memory to enterprise memory.
 
@@ -633,6 +635,6 @@ Phase 5: Admin management UI
 - Conversation memory has a default lifecycle.
 - mem0 provider failures do not block replies.
 - Sensitive values are not sent to mem0 by the memory write path.
-- Existing Markdown memory continues to work when mem0 is disabled.
+- Structured SQLite memory continues to work when mem0 is disabled.
 - Non-Feishu connectors are not broken by the new memory subsystem.
 - Tests cover policy, context mapping, layered retrieval, and provider failure behavior.

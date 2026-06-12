@@ -137,19 +137,19 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
     try {
       const { tabId } = req.params;
       let { modelConfig } = req.body;
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
-      const { updateTabModelConfig, getTabConfig, saveTabConfig } = await import('../../main/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
+      const { updateTabModelConfig, getTabConfig, saveTabConfig } = await import('../../main/infrastructure/database/tab-config');
       const store = SystemConfigStore.getInstance();
 
       if (modelConfig && modelConfig.modelId && !modelConfig.contextWindow) {
-        const { getContextWindowFromModelId } = await import('../../main/utils/model-info-fetcher');
+        const { getContextWindowFromModelId } = await import('../../main/infrastructure/utils/model-info-fetcher');
         modelConfig.contextWindow = getContextWindowFromModelId(modelConfig.modelId);
       }
 
       // 确保 tab 在数据库中有记录
       const existing = getTabConfig(store.getDb(), tabId as string);
       if (!existing) {
-        const { getGatewayInstance } = await import('../../main/gateway');
+        const { getGatewayInstance } = await import('../../main/infrastructure/gateway/gateway');
         const gw = getGatewayInstance();
         const tab = gw?.getTabManager().getAllTabs().find((t: any) => t.id === tabId);
         if (tab) {
@@ -179,7 +179,7 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
   const getTabModelConfig: RequestHandler = async (req, res) => {
     try {
       const { tabId } = req.params;
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       const tabConfig = store.getTabConfig(tabId as string);
       res.json({ success: true, modelConfig: tabConfig?.modelConfig || null });
@@ -199,7 +199,7 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
       if (!title) return res.status(400).json({ success: false, error: 'title is required' });
       if (title.length > 20) return res.json({ success: false, error: '名称不能超过 20 个字符' });
 
-      const { getGatewayInstance } = await import('../../main/gateway');
+      const { getGatewayInstance } = await import('../../main/infrastructure/gateway/gateway');
       const gateway = getGatewayInstance();
       if (!gateway) return res.status(500).json({ success: false, error: 'Gateway 未初始化' });
 
@@ -225,7 +225,7 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
       tabManager.updateTabTitle(tabId as string, finalTitle);
 
       // 更新 agentName
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       store.updateTabAgentName(tabId as string, title);
 
@@ -256,7 +256,7 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
   const getTabWorkPrompt: RequestHandler = async (req, res) => {
     try {
       const { tabId } = req.params;
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       const tabConfig = store.getTabConfig(tabId as string);
       res.json({ success: true, workPrompt: tabConfig?.workPrompt || '' });
@@ -269,12 +269,12 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
     try {
       const { tabId } = req.params;
       const { workPrompt } = req.body;
-      const { updateTabWorkPrompt } = await import('../../main/database/tab-config');
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { updateTabWorkPrompt } = await import('../../main/infrastructure/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       const trimmed = workPrompt ? workPrompt.substring(0, 10000) : null;
       updateTabWorkPrompt(store.getDb(), tabId as string, trimmed);
-      const { getGatewayInstance } = await import('../../main/gateway');
+      const { getGatewayInstance } = await import('../../main/infrastructure/gateway/gateway');
       const gateway = getGatewayInstance();
       if (gateway) gateway.invalidateSessionSystemPrompt(tabId as string);
       res.json({ success: true });
@@ -290,7 +290,7 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
   const getTabSkillWhitelist: RequestHandler = async (req, res) => {
     try {
       const { tabId } = req.params;
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       const tabConfig = store.getTabConfig(tabId as string);
       res.json({ success: true, whitelist: tabConfig?.skillWhitelist || [] });
@@ -303,8 +303,8 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
     try {
       const { tabId } = req.params;
       const { whitelist } = req.body;
-      const { updateTabSkillWhitelist } = await import('../../main/database/tab-config');
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { updateTabSkillWhitelist } = await import('../../main/infrastructure/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       updateTabSkillWhitelist(store.getDb(), tabId as string, whitelist);
       res.json({ success: true });
@@ -320,7 +320,7 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
   const getTabWorkspaceDirs: RequestHandler = async (req, res) => {
     try {
       const { tabId } = req.params;
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       const tabConfig = store.getTabConfig(tabId as string);
       res.json({ success: true, workspaceDirs: tabConfig?.workspaceDirs || null });
@@ -333,12 +333,12 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
     try {
       const { tabId } = req.params;
       const { dirs } = req.body;
-      const { updateTabWorkspaceDirs } = await import('../../main/database/tab-config');
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { updateTabWorkspaceDirs } = await import('../../main/infrastructure/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       updateTabWorkspaceDirs(store.getDb(), tabId as string, dirs);
       // 销毁 Runtime，下次使用时用新工作目录重建
-      const { getGatewayInstance } = await import('../../main/gateway');
+      const { getGatewayInstance } = await import('../../main/infrastructure/gateway/gateway');
       const gw = getGatewayInstance();
       if (gw) {
         await gw.destroySessionRuntime(tabId as string);
@@ -357,7 +357,7 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
   const getTabImageToolConfig: RequestHandler = async (req, res) => {
     try {
       const { tabId } = req.params;
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       const row = store.getDb().prepare('SELECT image_tool_config FROM agent_tabs WHERE id = ?').get(tabId) as any;
       const config = row?.image_tool_config ? JSON.parse(row.image_tool_config) : null;
@@ -371,12 +371,12 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
     try {
       const { tabId } = req.params;
       const { config } = req.body;
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
 
       // 验证 API Key 配额后缀
       if (config && config.apiKey) {
-        const { parseApiKeyQuota } = await import('../../main/tools/providers/image-quota');
+        const { parseApiKeyQuota } = await import('../../main/domains/tools/providers/image-quota');
         const parsed = parseApiKeyQuota(config.apiKey, store);
         if (!parsed) {
           res.json({ success: false, error: 'API Key 无效，请检查是否正确' });
@@ -399,8 +399,8 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
   const getTabReplyMode: RequestHandler = async (req, res) => {
     try {
       const { tabId } = req.params;
-      const { getTabConfig } = await import('../../main/database/tab-config');
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { getTabConfig } = await import('../../main/infrastructure/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const db = SystemConfigStore.getInstance().getDb();
       const config = getTabConfig(db, tabId as string);
       res.json({ success: true, replyMode: config?.replyMode || 'agent' });
@@ -413,8 +413,8 @@ export function createTabsRouter(gatewayAdapter: GatewayAdapter): Router {
     try {
       const { tabId } = req.params;
       const { replyMode } = req.body;
-      const { updateTabReplyMode } = await import('../../main/database/tab-config');
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { updateTabReplyMode } = await import('../../main/infrastructure/database/tab-config');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const db = SystemConfigStore.getInstance().getDb();
       updateTabReplyMode(db, tabId as string, replyMode);
       res.json({ success: true });

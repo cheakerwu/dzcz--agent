@@ -15,7 +15,7 @@ import type { GatewayAdapter } from './gateway-adapter';
 import type { ClientMessage, ServerMessage, TokenPayload } from './types';
 import { getErrorMessage } from '../shared/utils/error-handler';
 import { generateId } from '../shared/utils/id-generator';
-import { TIMEOUTS } from '../main/config/timeouts';
+import { TIMEOUTS } from '../main/infrastructure/config/constants/timeouts';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'deepbot-default-secret-change-in-production';
 const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD;
