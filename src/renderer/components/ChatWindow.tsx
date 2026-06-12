@@ -31,6 +31,7 @@ interface ChatWindowProps {
   onOpenScheduledTaskManager?: () => void;
   onOpenSystemSettings?: () => void;
   onOpenAdminConsole?: () => void;
+  onOpenStoreSessionManager?: () => void;
   isLocked?: boolean;
   pendingPairingCount?: number; // 待授权用户数量
   // Tab 相关
@@ -51,6 +52,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = React.memo(({
   onOpenScheduledTaskManager,
   onOpenSystemSettings,
   onOpenAdminConsole,
+  onOpenStoreSessionManager,
   isLocked = false,
   pendingPairingCount = 0,
   tabs,
@@ -679,7 +681,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = React.memo(({
               [ADMIN]
             </button>
           )}
-          
+
+          {onOpenStoreSessionManager && (
+            <button
+              onClick={onOpenStoreSessionManager}
+              className="terminal-control-button"
+              title={lang === 'zh' ? '门店登录态配置' : 'Store Session Manager'}
+            >
+              [STORES]
+            </button>
+          )}
+
           {onOpenSystemSettings && (
             <button
               onClick={onOpenSystemSettings}

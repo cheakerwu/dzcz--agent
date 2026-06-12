@@ -42,6 +42,9 @@ import { feishuDocToolPlugin } from '../feishu-doc-tool';
 import { feishuCardToolPlugin } from '../feishu-card-tool';
 import { feishuBitableToolPlugin } from '../feishu-bitable-tool';
 import { ocrToolPlugin } from '../ocr-tool';
+import { storeSessionToolPlugin } from '../store-session-tool';
+import { storeImportToolPlugin } from '../store-import-tool';
+import { storeManagementToolPlugin } from '../store-management-tool';
 
 /**
  * 解析 plugin.create() 的返回值，统一处理 Promise 和数组/单个工具
@@ -236,6 +239,15 @@ export class ToolLoader {
       if (isEnabled(TOOL_NAMES.OCR_IMAGE) || isEnabled(TOOL_NAMES.OCR_PDF)) {
         tools.push(...await resolvePluginTools(ocrToolPlugin.create(pluginOpts)));
       }
+
+      // 门店登录态工具
+      tools.push(...await resolvePluginTools(storeSessionToolPlugin.create(pluginOpts)));
+
+      // 门店批量导入工具
+      tools.push(...await resolvePluginTools(storeImportToolPlugin.create(pluginOpts)));
+
+      // 门店管理工具
+      tools.push(...await resolvePluginTools(storeManagementToolPlugin.create(pluginOpts)));
 
     } catch (error) {
       console.error('❌ 加载内置工具失败:', error);
