@@ -12,13 +12,13 @@ const root = process.cwd();
 execFileSync('pnpm', ['run', 'build:main'], { cwd: root, stdio: 'inherit' });
 
 const { default: Database } = require('../dist-electron/shared/utils/sqlite-adapter.js');
-const { AdminControlPlaneService } = require('../dist-electron/main/admin-control-plane/service.js');
-const { BrowserActControlService } = require('../dist-electron/main/browser-act/browser-act-control-service.js');
-const { FeishuLoginCommandHandler } = require('../dist-electron/main/connectors/feishu/login-command-handler.js');
+const { AdminControlPlaneService } = require('../dist-electron/main/domains/admin-control-plane/service.js');
+const { BrowserActControlService } = require('../dist-electron/main/domains/browser-act/browser-act-control-service.js');
+const { FeishuLoginCommandHandler } = require('../dist-electron/main/domains/connectors/feishu/login-command-handler.js');
 const {
   startBrowserActLoginRequest,
   completeBrowserActLoginRequest,
-} = require('../dist-electron/main/connectors/feishu/browser-act-login-flow.js');
+} = require('../dist-electron/main/domains/connectors/feishu/browser-act-login-flow.js');
 
 class FakeBrowserActRunner {
   constructor() {
@@ -41,6 +41,19 @@ class FakeBrowserActRunner {
     }
     if (args[0] === '--session' && args[2] === 'get' && args[3] === 'markdown') {
       return '经营数据 门店管理 商品管理 订单管理';
+    }
+    return '';
+  }
+}
+
+class RemoteAssistFailureRunner extends FakeBrowserActRunner {
+  async run(args) {
+    this.calls.push(args);
+    if (args.join(' ') === 'browser list') {
+      return 'id=chrome_mt name="meituan-merchant" type=chrome state=idle\n  desc="望京店 美团商家后台"';
+    }
+    if (args.includes('remote-assist')) {
+      throw new Error('remote assist relay unavailable');
     }
     return '';
   }
@@ -160,6 +173,63 @@ test('feishu remote assist login flow registers a verified browser-act profile w
     assert.match(promptContext, /high_risk_write/);
     assert.doesNotMatch(promptContext, /browser-act:chrome_mt/);
     assert.doesNotMatch(promptContext, /chrome_mt/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('remote assist startup failure marks request failed and closes temporary session', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dianbot-remote-login-failure-'));
+
+  try {
+    const db = new Database(join(dir, 'flow.db'));
+    const service = new AdminControlPlaneService(db);
+    service.ensureSchema();
+    const store = service.createStore({
+      name: '望京店',
+      brand: '点之出众',
+      city: '北京',
+      area: '朝阳',
+      status: 'operating',
+    }, 'test');
+    service.createPlatformAccount({
+      platform: 'meituan',
+      label: '望京店美团运营账号',
+      storeId: store.id,
+      accountRef: 'mt-wangjing-main',
+      riskAccountClass: 'high_risk',
+    }, 'test');
+
+    const runner = new RemoteAssistFailureRunner();
+    const browserAct = new BrowserActControlService({ runner, workspaceDir: root });
+
+    await assert.rejects(
+      () => startBrowserActLoginRequest({
+        service,
+        browserAct,
+        input: {
+          platform: '美团',
+          storeName: '望京店',
+          requesterUserId: 'ou_1',
+          requesterOpenId: 'ou_open_1',
+          requesterName: '小王',
+          conversationId: 'oc_group_1',
+          conversationType: 'group',
+        },
+        actorId: 'flow-test',
+      }),
+      /remote assist relay unavailable/,
+    );
+
+    const loginRequest = service.listBrowserLoginRequests()[0];
+    assert.equal(loginRequest.status, 'failed');
+    assert.equal(loginRequest.browserActBrowserId, undefined);
+    assert.match(loginRequest.failedReason || '', /remote assist relay unavailable/);
+    assert.equal(service.listBrowserProfiles().length, 0);
+    assert.ok(
+      runner.calls.some((args) => args.join(' ') === `session close ${loginRequest.sessionName}`),
+      'failed remote assist startup should close the temporary browser-act session',
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

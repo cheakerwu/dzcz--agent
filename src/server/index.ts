@@ -13,7 +13,7 @@ import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import cors from 'cors';
 import path from 'path';
-import { Gateway, setGlobalGatewayInstance } from '../main/gateway';
+import { Gateway, setGlobalGatewayInstance } from '../main/infrastructure/gateway/gateway';
 import { GatewayAdapter } from './gateway-adapter';
 import { WebSocketManager } from './websocket-manager';
 import { authMiddleware, loginHandler } from './middleware/auth';
@@ -29,7 +29,7 @@ import { createImageUsageRouter } from './routes/image-usage';
 import { createModelProviderRoutingRouter } from './routes/model-provider-routing';
 import { createExternalRouter } from './routes/external';
 import { createAdminControlPlaneRouter } from './routes/admin-control-plane';
-import { TIMEOUTS } from '../main/config/timeouts';
+import { TIMEOUTS } from '../main/infrastructure/config/constants/timeouts';
 
 // 读取环境变量
 const PORT = parseInt(process.env.PORT || '3008');

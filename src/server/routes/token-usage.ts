@@ -20,8 +20,8 @@ export function createTokenUsageRouter(): Router {
         return;
       }
 
-      const { getTokenUsage: queryTokenUsage } = await import('../../main/database/token-usage');
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { getTokenUsage: queryTokenUsage } = await import('../../main/infrastructure/database/token-usage');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const db = SystemConfigStore.getInstance().getDb();
       const records = queryTokenUsage(db, startDate as string, endDate as string);
       res.json({ success: true, records });
@@ -45,8 +45,8 @@ export function createTokenUsageRouter(): Router {
         return;
       }
 
-      const { resetTokenUsage } = await import('../../main/database/token-usage');
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { resetTokenUsage } = await import('../../main/infrastructure/database/token-usage');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const db = SystemConfigStore.getInstance().getDb();
       resetTokenUsage(db, decodeURIComponent(modelId));
       res.json({ success: true });

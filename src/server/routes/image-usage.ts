@@ -20,8 +20,8 @@ export function createImageUsageRouter(): Router {
         return;
       }
 
-      const { getImageUsage: queryImageUsage } = await import('../../main/database/image-usage');
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { getImageUsage: queryImageUsage } = await import('../../main/infrastructure/database/image-usage');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const db = SystemConfigStore.getInstance().getDb();
       const records = queryImageUsage(db, startDate as string, endDate as string);
       res.json({ success: true, records });

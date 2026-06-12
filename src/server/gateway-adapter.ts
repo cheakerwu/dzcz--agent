@@ -5,7 +5,7 @@
  */
 
 import { EventEmitter } from 'events';
-import type { Gateway } from '../main/gateway';
+import type { Gateway } from '../main/infrastructure/gateway/gateway';
 import type { AgentTab } from '../types/agent-tab';
 import type { Message } from '../types/message';
 
@@ -286,7 +286,7 @@ export class GatewayAdapter extends EventEmitter {
    * 获取配置
    */
   async getConfig(): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const { isDockerMode } = await import('../shared/utils/docker-utils');
     const store = SystemConfigStore.getInstance();
     
@@ -306,14 +306,14 @@ export class GatewayAdapter extends EventEmitter {
    * 更新配置
    */
   async updateConfig(updates: any): Promise<void> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     
     // 更新模型配置
     if (updates.model) {
       // 推断上下文窗口大小（和 Electron 模式逻辑一致）
       if (!updates.model.contextWindow && updates.model.modelId) {
-        const { getContextWindowFromModelId } = await import('../main/utils/model-info-fetcher');
+        const { getContextWindowFromModelId } = await import('../main/infrastructure/utils/model-info-fetcher');
         updates.model.contextWindow = getContextWindowFromModelId(updates.model.modelId);
       }
       store.saveModelConfig(updates.model);
@@ -352,7 +352,7 @@ export class GatewayAdapter extends EventEmitter {
     if (updates.imageGeneration) {
       // 验证 API Key 配额后缀
       if (updates.imageGeneration.apiKey) {
-        const { parseApiKeyQuota } = await import('../main/tools/providers/image-quota');
+        const { parseApiKeyQuota } = await import('../main/domains/tools/providers/image-quota');
         const parsed = parseApiKeyQuota(updates.imageGeneration.apiKey, store);
         if (!parsed) {
           throw new Error('API Key 无效，请检查是否正确');
@@ -376,8 +376,8 @@ export class GatewayAdapter extends EventEmitter {
    * 环境检查
    */
   async checkEnvironment(action: 'check' | 'get_status'): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
-    const { createEnvironmentCheckTool } = await import('../main/tools/environment-check-tool');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
+    const { createEnvironmentCheckTool } = await import('../main/domains/tools/environment-check-tool');
     
     const tool = createEnvironmentCheckTool();
     const result = await tool.execute('env-check', { action });
@@ -401,7 +401,7 @@ export class GatewayAdapter extends EventEmitter {
    * 连接器操作
    */
   async connectorGetAll(): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     
     const connectorManager = this.gateway.getConnectorManager();
@@ -426,7 +426,7 @@ export class GatewayAdapter extends EventEmitter {
 
   
   async connectorGetConfig(connectorId: string): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     
     const configData = store.getConnectorConfig(connectorId);
@@ -439,7 +439,7 @@ export class GatewayAdapter extends EventEmitter {
   }
   
   async connectorSaveConfig(connectorId: string, config: any): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     
     const connectorManager = this.gateway.getConnectorManager();
@@ -461,7 +461,7 @@ export class GatewayAdapter extends EventEmitter {
   }
   
   async connectorStart(connectorId: string): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     
     // 先更新数据库状态（必须在 startConnector 之前，与 Electron 版本一致）
@@ -481,7 +481,7 @@ export class GatewayAdapter extends EventEmitter {
     await connectorManager.stopConnector(connectorId as any);
     
     // 更新数据库状态（与 Electron 版本一致）
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     store.setConnectorEnabled(connectorId, false);
     
@@ -513,7 +513,7 @@ export class GatewayAdapter extends EventEmitter {
   }
   
   async connectorApprovePairing(pairingCode: string): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     
     // 批准前先查出用户信息（含 openId），用于发送欢迎消息
@@ -536,7 +536,7 @@ export class GatewayAdapter extends EventEmitter {
   }
   
   async connectorSetAdminPairing(connectorId: string, userId: string, isAdmin: boolean): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     
     store.setAdminPairing(connectorId, userId, isAdmin);
@@ -544,7 +544,7 @@ export class GatewayAdapter extends EventEmitter {
   }
   
   async connectorDeletePairing(connectorId: string, userId: string): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     
     store.deletePairingRecord(connectorId, userId);
@@ -568,7 +568,7 @@ export class GatewayAdapter extends EventEmitter {
   }
   
   async connectorGetPairingRecords(): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     
     const records = store.getAllPairingRecords();
@@ -610,22 +610,22 @@ export class GatewayAdapter extends EventEmitter {
   }
 
   async connectorSaveKfWelcome(openKfId: string, welcome: string): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     store.setAppSetting(`smart_kf_welcome_${openKfId}`, welcome);
     return { success: true };
   }
 
   async connectorGetKfWelcome(openKfId: string): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     const value = store.getAppSetting(`smart_kf_welcome_${openKfId}`);
     return { success: true, value };
   }
 
   async connectorSaveKfWorkPrompt(settingKey: string, workPrompt: string, connectorId: string): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
-    const { updateTabWorkPrompt } = await import('../main/database/tab-config');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
+    const { updateTabWorkPrompt } = await import('../main/infrastructure/database/tab-config');
     const store = SystemConfigStore.getInstance();
     const trimmed = workPrompt ? workPrompt.substring(0, 10000) : '';
     store.setAppSetting(settingKey, trimmed);
@@ -652,8 +652,8 @@ export class GatewayAdapter extends EventEmitter {
   }
 
   async connectorSaveKfWorkspaceDirs(settingKey: string, connectorId: string, dirs: string[] | null): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
-    const { updateTabWorkspaceDirs } = await import('../main/database/tab-config');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
+    const { updateTabWorkspaceDirs } = await import('../main/infrastructure/database/tab-config');
     const store = SystemConfigStore.getInstance();
     store.setAppSetting(settingKey, dirs ? JSON.stringify(dirs) : '');
 
@@ -678,7 +678,7 @@ export class GatewayAdapter extends EventEmitter {
   }
 
   async connectorGetKfWorkspaceDirs(settingKey: string): Promise<any> {
-    const { SystemConfigStore } = await import('../main/database/system-config-store');
+    const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
     const store = SystemConfigStore.getInstance();
     const json = store.getAppSetting(settingKey);
     const dirs = json ? JSON.parse(json) : null;
@@ -689,7 +689,7 @@ export class GatewayAdapter extends EventEmitter {
    * 定时任务
    */
   async scheduledTask(request: any): Promise<any> {
-    const { createScheduledTaskTool } = await import('../main/tools/scheduled-task-tool');
+    const { createScheduledTaskTool } = await import('../main/domains/tools/scheduled-task-tool');
     
     const tool = createScheduledTaskTool();
     const result = await tool.execute('scheduled-task', request);
@@ -742,7 +742,7 @@ export class GatewayAdapter extends EventEmitter {
       const fs = await import('fs');
       const path = await import('path');
       const crypto = await import('crypto');
-      const { SystemConfigStore } = await import('../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
       const { ensureDirectoryExists } = await import('../shared/utils/fs-utils');
       
       // 检查文件大小
@@ -822,7 +822,7 @@ export class GatewayAdapter extends EventEmitter {
     try {
       const fs = await import('fs');
       const path = await import('path');
-      const { isPathAllowed } = await import('../main/utils/path-security');
+      const { isPathAllowed } = await import('../main/infrastructure/utils/path-security');
       
       // 使用统一的路径安全检查（和 Electron 模式一致）
       if (!isPathAllowed(filePath)) {
@@ -860,7 +860,7 @@ export class GatewayAdapter extends EventEmitter {
   async deleteTempFile(filePath: string): Promise<any> {
     try {
       const path = await import('path');
-      const { SystemConfigStore } = await import('../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../main/infrastructure/database/system-config-store');
       const { safeRemove } = await import('../shared/utils/fs-utils');
       
       // 获取工作目录配置
@@ -899,7 +899,7 @@ export class GatewayAdapter extends EventEmitter {
    * Skill 管理
    */
   async skillManager(request: any): Promise<any> {
-    const { createSkillManagerTool } = await import('../main/tools/skill-manager-tool');
+    const { createSkillManagerTool } = await import('../main/domains/tools/skill-manager-tool');
     const { getErrorMessage } = await import('../shared/utils/error-handler');
     
     const tool = createSkillManagerTool();

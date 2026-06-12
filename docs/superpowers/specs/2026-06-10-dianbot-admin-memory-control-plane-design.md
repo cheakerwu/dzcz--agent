@@ -1,9 +1,11 @@
 # DianBot Admin Memory Control Plane Design
 
 Date: 2026-06-10
-Status: Proposed for implementation planning
+Status: Partially superseded by `docs/superpowers/specs/2026-06-12-policy-three-layer-memory-design.md`
 Owner: DianBot / 点之出众 internal agent workspace
 Supersedes: `docs/superpowers/plans/2026-06-10-cowagent-capability-adoption.md` Task 3 as originally written
+
+Update on 2026-06-12: old Markdown memory is not retained as runtime fallback. It may only be used as an explicit migration source that creates reviewable structured memory candidates.
 
 ## Summary
 
@@ -23,7 +25,7 @@ The first implementation should keep the current Electron/React shell and SQLite
 
 - Turn the local Electron app into an admin console, not only a settings dialog.
 - Provide fast management of store, group, employee, login state, and memory relationships.
-- Make structured business assignments the authority, with mem0 and Markdown memories synced from those assignments.
+- Make structured business assignments the authority, with approved structured memories synced to optional providers such as mem0.
 - Support enterprise, employee, conversation, store, and task memory governance.
 - Keep browser login state separate from memory and protect it as a controlled operational asset.
 - Make personnel changes, group changes, and store responsibility changes easy to perform safely.
@@ -87,7 +89,7 @@ Structured assignments own operational truth. Memory text is generated, approved
 The landing page should show what requires administrator attention:
 
 - Stores, active Feishu conversations, employees, and enabled connectors.
-- mem0 and Markdown fallback health.
+- structured memory and optional mem0 sync health.
 - Pending memory reviews.
 - Browser profiles that are expired, unhealthy, or near re-authentication.
 - Feishu conversations without store bindings.
@@ -247,7 +249,8 @@ Authority axis:
 
 Retrieval axis:
   mem0 active memory search
-  Markdown fallback and audit files
+  reviewed structured memory in SQLite
+  optional legacy Markdown import candidates
 ```
 
 When an administrator changes a structured assignment:
@@ -316,7 +319,7 @@ Enterprise memory requires admin or ops lead approval. Employee memory can be wr
 
 - Add `memory_items`, sources, links, reviews, versions, and provider sync tables.
 - Build memory governance UI.
-- Add mem0 sync state and Markdown fallback references.
+- Add mem0 sync state and legacy Markdown migration-source references.
 - Support approve, reject, edit, archive, promote, demote, and resync.
 
 ### Phase 3: Browser Login State Vault

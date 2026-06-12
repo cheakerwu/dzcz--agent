@@ -19,7 +19,7 @@ export function createModelProviderRoutingRouter(): Router {
       if (!modelId) {
         return res.status(400).json({ success: false, error: 'modelId is required' });
       }
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       // 优先从数据库读取，没有则返回默认值
       const routing = store.getModelProviderRouting(modelId) || store.getDefaultModelProviderRouting(modelId);
@@ -40,7 +40,7 @@ export function createModelProviderRoutingRouter(): Router {
       if (!modelId) {
         return res.status(400).json({ success: false, error: 'modelId is required' });
       }
-      const { SystemConfigStore } = await import('../../main/database/system-config-store');
+      const { SystemConfigStore } = await import('../../main/infrastructure/database/system-config-store');
       const store = SystemConfigStore.getInstance();
       if (providerOrder) {
         store.saveModelProviderRouting(modelId, providerOrder, allowFallbacks ?? false);

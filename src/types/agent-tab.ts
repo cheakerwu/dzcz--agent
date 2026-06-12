@@ -3,7 +3,7 @@
  */
 
 import type { Message } from './message';
-import type { TabModelConfig } from '../main/database/tab-config';
+import type { TabModelConfig } from '../main/infrastructure/database/tab-config';
 
 /**
  * 待处理消息（用于消息队列）

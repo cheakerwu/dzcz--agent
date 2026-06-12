@@ -364,7 +364,7 @@ export function createConnectorsRouter(gatewayAdapter: GatewayAdapter): Router {
   // 企业微信多实例管理
   const createWecom: RequestHandler = async (req, res) => {
     try {
-      const { getGatewayInstance } = await import('../../main/gateway');
+      const { getGatewayInstance } = await import('../../main/infrastructure/gateway/gateway');
       const gw = getGatewayInstance();
       if (!gw) throw new Error('Gateway 未初始化');
       const connectorManager = gw.getConnectorManager();
@@ -380,7 +380,7 @@ export function createConnectorsRouter(gatewayAdapter: GatewayAdapter): Router {
       const connectorId = Array.isArray(req.params.connectorId)
         ? req.params.connectorId[0]
         : req.params.connectorId;
-      const { getGatewayInstance } = await import('../../main/gateway');
+      const { getGatewayInstance } = await import('../../main/infrastructure/gateway/gateway');
       const gw = getGatewayInstance();
       if (!gw) throw new Error('Gateway 未初始化');
       const connectorManager = gw.getConnectorManager();
@@ -402,7 +402,7 @@ export function createConnectorsRouter(gatewayAdapter: GatewayAdapter): Router {
         res.status(400).json({ success: false, error: '缺少 tabId 或 content' });
         return;
       }
-      const { getGatewayInstance } = await import('../../main/gateway');
+      const { getGatewayInstance } = await import('../../main/infrastructure/gateway/gateway');
       const gw = getGatewayInstance();
       if (!gw) throw new Error('Gateway 未初始化');
       await gw.sendManualReply(tabId, content);

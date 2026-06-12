@@ -11,7 +11,7 @@ execFileSync('pnpm', ['run', 'build:main'], { cwd: root, stdio: 'inherit' });
 const {
   isValidFeishuAppId,
   describeFeishuConnectionStatus,
-} = require('../dist-electron/main/connectors/feishu/feishu-connector.js');
+} = require('../dist-electron/main/domains/connectors/feishu/feishu-connector.js');
 
 test('feishu app id validation matches SDK long connection requirements', () => {
   assert.equal(isValidFeishuAppId('cli_1234567890abcdef'), true);

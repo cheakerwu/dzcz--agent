@@ -12,32 +12,31 @@ const {
   buildAdminMemorySection,
   buildCoreMemorySection,
   buildFastModeSystemPrompt,
-} = require('../dist-electron/main/prompts/memory-sections.js');
+} = require('../dist-electron/main/domains/prompts/memory-sections.js');
 
-test('core memory is demoted when structured admin memory is available', () => {
+test('old Markdown memory is not injected into runtime prompt sections', () => {
   const section = buildCoreMemorySection('旧记忆：人民广场店负责人是小张。', {
     hasAdminMemoryContext: true,
   }).join('\n');
 
-  assert.match(section, /如果核心记忆与运营记忆控制平面冲突，以运营记忆控制平面为准/);
-  assert.match(section, /核心记忆主要用于个人偏好、交互习惯和错误总结/);
-  assert.match(section, /旧记忆：人民广场店负责人是小张/);
+  assert.equal(section, '');
 });
 
-test('fast mode prompt includes structured admin memory with priority guidance', () => {
-  const adminSection = buildAdminMemorySection('可用运营记忆:\n- [store] 人民广场店负责人是小李。').join('\n');
-  assert.match(adminSection, /业务事实、门店关系、员工权限和浏览器登录态引用以本节为准/);
+test('fast mode prompt includes structured operation context only', () => {
+  const adminSection = buildAdminMemorySection('### 企业记忆\n- 企业日报默认先看营业额。').join('\n');
+  assert.match(adminSection, /## 运营上下文/);
+  assert.match(adminSection, /结构化企业、群聊、个人记忆/);
 
   const prompt = buildFastModeSystemPrompt({
     agentName: 'DianBot',
     userName: '管理员',
     memoryContent: '旧记忆：人民广场店负责人是小张。',
-    adminMemoryContext: '可用运营记忆:\n- [store] 人民广场店负责人是小李。',
+    adminMemoryContext: '### 企业记忆\n- 企业日报默认先看营业额。',
   });
 
   assert.match(prompt, /当前处于 Fast 模式/);
-  assert.match(prompt, /## 核心记忆/);
-  assert.match(prompt, /## 运营记忆控制平面/);
-  assert.match(prompt, /如果核心记忆与运营记忆控制平面冲突，以运营记忆控制平面为准/);
-  assert.match(prompt, /人民广场店负责人是小李/);
+  assert.doesNotMatch(prompt, /## 核心记忆/);
+  assert.doesNotMatch(prompt, /旧记忆/);
+  assert.match(prompt, /## 运营上下文/);
+  assert.match(prompt, /企业日报默认先看营业额/);
 });

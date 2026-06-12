@@ -12,7 +12,7 @@ const root = process.cwd();
 execFileSync('pnpm', ['run', 'build:main'], { cwd: root, stdio: 'inherit' });
 
 const { default: Database } = require('../dist-electron/shared/utils/sqlite-adapter.js');
-const { AdminControlPlaneService } = require('../dist-electron/main/admin-control-plane/service.js');
+const { AdminControlPlaneService } = require('../dist-electron/main/domains/admin-control-plane/service.js');
 
 test('admin control plane manages store scope, memory, browser vault, and offboarding', () => {
   const dir = mkdtempSync(join(tmpdir(), 'dianbot-admin-memory-'));
