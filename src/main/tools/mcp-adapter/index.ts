@@ -12,6 +12,20 @@
 import { Type, type Static } from '@sinclair/typebox';
 import type { AgentTool } from '@mariozechner/pi-agent-core';
 import type { ToolPlugin, ToolCreateOptions } from '../registry/tool-interface';
+
+/**
+ * 安全日志：捕获 EPIPE 防止崩溃
+ * Electron 主进程 stdout 可能是管道，管道断开时 console.log 会抛 EPIPE
+ */
+function safeLog(...args: any[]): void {
+  try { console.log(...args); } catch (e: any) { if (e?.code !== 'EPIPE') throw e; }
+}
+function safeWarn(...args: any[]): void {
+  try { console.warn(...args); } catch (e: any) { if (e?.code !== 'EPIPE') throw e; }
+}
+function safeError(...args: any[]): void {
+  try { console.error(...args); } catch (e: any) { if (e?.code !== 'EPIPE') throw e; }
+}
 import { TOOL_NAMES } from '../tool-names';
 import { loadMcpConfig, getEnabledServers } from './mcp-config';
 import { McpClient } from './mcp-client';
@@ -229,11 +243,11 @@ export const mcpAdapterToolPlugin: ToolPlugin = {
     const enabledServers = getEnabledServers(config);
 
     if (enabledServers.length === 0) {
-      console.log('[MCP Adapter] ℹ️ 未配置 MCP Server（配置文件: ~/.deepbot/mcp-config.json）');
+      safeLog('[MCP Adapter] ℹ️ 未配置 MCP Server（配置文件: ~/.deepbot/mcp-config.json）');
       return tools;
     }
 
-    console.log(`[MCP Adapter] 🔌 正在连接 ${enabledServers.length} 个 MCP Server...`);
+    safeLog(`[MCP Adapter] 🔌 正在连接 ${enabledServers.length} 个 MCP Server...`);
 
     // 3. 并行连接所有 server
     const connectPromises = enabledServers.map(async ({ name, config: serverConfig }) => {
@@ -249,14 +263,14 @@ export const mcpAdapterToolPlugin: ToolPlugin = {
           tools.push(createMcpTool(mcpTool, client));
         }
       } catch (error) {
-        console.error(`[MCP Adapter] ❌ Server "${name}" 初始化失败:`, error);
+        safeError(`[MCP Adapter] ❌ Server "${name}" 初始化失败:`, error);
       }
     });
 
     await Promise.allSettled(connectPromises);
 
     const totalTools = tools.length - 1; // 减去管理工具
-    console.log(`[MCP Adapter] ✅ MCP 适配器加载完成: ${totalTools} 个外部工具`);
+    safeLog(`[MCP Adapter] ✅ MCP 适配器加载完成: ${totalTools} 个外部工具`);
 
     return tools;
   },
@@ -266,7 +280,7 @@ export const mcpAdapterToolPlugin: ToolPlugin = {
       try {
         await client.disconnect();
       } catch (error) {
-        console.warn(`[MCP Adapter] ⚠️ 断开 "${name}" 失败:`, error);
+        safeWarn(`[MCP Adapter] ⚠️ 断开 "${name}" 失败:`, error);
       }
     }
     clients.clear();
