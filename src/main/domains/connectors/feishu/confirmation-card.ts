@@ -1,6 +1,12 @@
 export type FeishuConfirmationRiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type FeishuConfirmationStatus = 'pending' | 'approved' | 'rejected' | 'expired';
 
+export interface FeishuConfirmationExecutionBinding {
+  toolName: string;
+  signature: string;
+  summary?: string;
+}
+
 export interface FeishuConfirmationPlanInput {
   planId: string;
   title: string;
@@ -11,6 +17,7 @@ export interface FeishuConfirmationPlanInput {
   conversationId?: string;
   messageId?: string;
   details?: Record<string, any>;
+  executionBinding?: FeishuConfirmationExecutionBinding;
   createdAt?: number;
   expiresAt?: number;
 }

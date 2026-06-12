@@ -72,7 +72,7 @@ export const feishuConfirmationToolPlugin: ToolPlugin = {
     const tool: AgentTool = {
       name: TOOL_NAMES.FEISHU_CONFIRMATION,
       label: '发送飞书操作确认',
-      description: `为高风险或中风险操作发送飞书确认卡片。适用于改价、改营业时间、改电话、发布活动、替换图片、删除或批量操作等写入动作。必须把 planId 视为本次操作计划的唯一确认编号；用户点击确认前，不要执行真实写入。`,
+      description: `为高风险或中风险操作发送飞书确认卡片。适用于改价、改营业时间、改电话、发布活动、替换图片、删除或批量操作等写入动作。必须把 planId 视为本次操作计划的唯一确认编号；用户点击确认前，不要执行真实写入。若上游工具返回 requiredConfirmationBinding，必须原样传入 execution_binding，防止确认编号被复用到不同操作。`,
       parameters: Type.Object({
         receive_id: Type.String({
           description: '接收确认卡片的飞书会话 ID，通常是当前群 chat_id 或当前用户 open_id',
@@ -96,6 +96,19 @@ export const feishuConfirmationToolPlugin: ToolPlugin = {
         details: Type.Optional(Type.Record(Type.String(), Type.Any(), {
           description: '操作详情，会展示在确认卡片中',
         })),
+        execution_binding: Type.Optional(Type.Object({
+          toolName: Type.String({
+            description: '本次确认绑定的工具名，例如 browser_act',
+          }),
+          signature: Type.String({
+            description: '本次确认绑定的执行签名，由需要确认的工具返回',
+          }),
+          summary: Type.Optional(Type.String({
+            description: '本次确认绑定的执行摘要，便于审计',
+          })),
+        }, {
+          description: '可选：把确认卡绑定到具体工具调用。高风险 BrowserAct 写入动作必须使用 browser_act 返回的 requiredConfirmationBinding。',
+        })),
         plan_id: Type.Optional(Type.String({
           description: '可选确认编号；不传时系统自动生成',
         })),
@@ -117,6 +130,7 @@ export const feishuConfirmationToolPlugin: ToolPlugin = {
             requesterName: args.requester_name,
             conversationId: args.receive_id,
             details: args.details || {},
+            executionBinding: args.execution_binding,
           });
 
           const sent = await sendInteractiveCard({
@@ -135,6 +149,7 @@ export const feishuConfirmationToolPlugin: ToolPlugin = {
             conversationId: args.receive_id,
             messageId: sent?.messageId,
             details: args.details || {},
+            executionBinding: args.execution_binding,
           });
 
           return {
@@ -148,6 +163,7 @@ export const feishuConfirmationToolPlugin: ToolPlugin = {
               status: plan.status,
               messageId: sent?.messageId,
               riskLevel,
+              executionBinding: plan.executionBinding,
             },
           };
         } catch (error) {

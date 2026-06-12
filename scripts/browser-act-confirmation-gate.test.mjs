@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -32,6 +33,16 @@ function readFakeBrowserActCalls(callsPath) {
   } catch {
     return [];
   }
+}
+
+function createBrowserActExecutionBinding(args) {
+  return {
+    toolName: 'browser_act',
+    signature: createHash('sha256')
+      .update(JSON.stringify({ toolName: 'browser_act', args }))
+      .digest('hex'),
+    summary: args.join(' '),
+  };
 }
 
 function createToolWithFakeBinary(tempRoot) {
@@ -83,6 +94,14 @@ test('browser-act write-like commands require an approved Feishu confirmation be
     assert.equal(blocked.isError, true);
     assert.match(blocked.content[0].text, /飞书确认|feishu_confirmation|confirmationPlanId/);
     assert.equal(blocked.details.confirmationRequired, true);
+    assert.ok(blocked.details.requiredConfirmationBinding);
+    assert.equal(blocked.details.requiredConfirmationBinding.toolName, 'browser_act');
+    assert.equal(blocked.details.requiredConfirmationBinding.signature, createBrowserActExecutionBinding([
+      '--session',
+      'merchant-demo',
+      'click',
+      'button:保存',
+    ]).signature);
     assert.deepEqual(readFakeBrowserActCalls(callsPath), [
       ['get-skills', 'core', '--skill-version', '2.0.2'],
     ]);
@@ -92,6 +111,7 @@ test('browser-act write-like commands require an approved Feishu confirmation be
       title: '保存门店资料',
       summary: '点击保存按钮',
       riskLevel: 'high',
+      executionBinding: createBrowserActExecutionBinding(['--session', 'merchant-demo', 'click', 'button:保存']),
     });
 
     const pending = await tool.execute('write-with-pending-confirmation', {
@@ -108,6 +128,7 @@ test('browser-act write-like commands require an approved Feishu confirmation be
       title: '保存门店资料',
       summary: '点击保存按钮',
       riskLevel: 'high',
+      executionBinding: createBrowserActExecutionBinding(['--session', 'merchant-demo', 'click', 'button:保存']),
     });
     globalFeishuConfirmationStore.reject('rejected_browser_write', {
       operatorId: 'ou_reviewer',
@@ -128,6 +149,7 @@ test('browser-act write-like commands require an approved Feishu confirmation be
       title: '保存门店资料',
       summary: '点击保存按钮',
       riskLevel: 'high',
+      executionBinding: createBrowserActExecutionBinding(['--session', 'merchant-demo', 'click', 'button:保存']),
     });
     globalFeishuConfirmationStore.approve('approved_browser_write', {
       operatorId: 'ou_reviewer',
@@ -141,9 +163,71 @@ test('browser-act write-like commands require an approved Feishu confirmation be
 
     assert.equal(approved.isError, false);
     assert.equal(approved.details.confirmationStatus, 'approved');
+    assert.deepEqual(approved.details.executionBinding, createBrowserActExecutionBinding([
+      '--session',
+      'merchant-demo',
+      'click',
+      'button:保存',
+    ]));
     assert.deepEqual(readFakeBrowserActCalls(callsPath), [
       ['get-skills', 'core', '--skill-version', '2.0.2'],
       ['--session', 'merchant-demo', 'click', 'button:保存'],
+    ]);
+  } finally {
+    if (previousBin === undefined) {
+      delete process.env.BROWSER_ACT_BIN;
+    } else {
+      process.env.BROWSER_ACT_BIN = previousBin;
+    }
+    if (previousCalls === undefined) {
+      delete process.env.FAKE_BROWSER_ACT_CALLS;
+    } else {
+      process.env.FAKE_BROWSER_ACT_CALLS = previousCalls;
+    }
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('browser-act approved confirmations are bound to the exact write command', async () => {
+  const {
+    globalFeishuConfirmationStore,
+  } = require('../dist-electron/main/domains/connectors/feishu/confirmation-card.js');
+
+  const tempRoot = mkdtempSync(join(tmpdir(), 'browser-act-confirmation-binding-'));
+  const previousBin = process.env.BROWSER_ACT_BIN;
+  const previousCalls = process.env.FAKE_BROWSER_ACT_CALLS;
+  const { binPath, callsPath } = createFakeBrowserActBinary(tempRoot);
+
+  process.env.BROWSER_ACT_BIN = binPath;
+  process.env.FAKE_BROWSER_ACT_CALLS = callsPath;
+
+  try {
+    const tool = createToolWithFakeBinary(tempRoot);
+    await loadGuide(tool);
+
+    globalFeishuConfirmationStore.create({
+      planId: 'approved_save_only',
+      title: '保存门店资料',
+      summary: '点击保存按钮',
+      riskLevel: 'high',
+      executionBinding: createBrowserActExecutionBinding(['--session', 'merchant-demo', 'click', 'button:保存']),
+    });
+    globalFeishuConfirmationStore.approve('approved_save_only', {
+      operatorId: 'ou_reviewer',
+      operatorName: 'Reviewer',
+    });
+
+    const mismatched = await tool.execute('write-with-mismatched-confirmation', {
+      args: ['--session', 'merchant-demo', 'click', 'button:发布'],
+      confirmationPlanId: 'approved_save_only',
+    });
+
+    assert.equal(mismatched.isError, true);
+    assert.match(mismatched.content[0].text, /不匹配|重新确认|executionBinding/);
+    assert.equal(mismatched.details.confirmationStatus, 'approved');
+    assert.equal(mismatched.details.confirmationBindingMatched, false);
+    assert.deepEqual(readFakeBrowserActCalls(callsPath), [
+      ['get-skills', 'core', '--skill-version', '2.0.2'],
     ]);
   } finally {
     if (previousBin === undefined) {

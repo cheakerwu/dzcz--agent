@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path';
@@ -14,7 +15,10 @@ import {
   truncateOutput,
   validateBrowserActArgs,
 } from './browser-act-command';
-import { globalFeishuConfirmationStore } from '../connectors/feishu/confirmation-card';
+import {
+  type FeishuConfirmationExecutionBinding,
+  globalFeishuConfirmationStore,
+} from '../connectors/feishu/confirmation-card';
 
 const DEFAULT_TIMEOUT_SECONDS = 120;
 const MAX_TIMEOUT_SECONDS = 900;
@@ -320,12 +324,31 @@ function formatBrowserActResult(
   return lines.join('\n');
 }
 
+function createBrowserActExecutionBinding(args: string[]): FeishuConfirmationExecutionBinding {
+  return {
+    toolName: TOOL_NAMES.BROWSER_ACT,
+    signature: createHash('sha256')
+      .update(JSON.stringify({ toolName: TOOL_NAMES.BROWSER_ACT, args }))
+      .digest('hex'),
+    summary: args.join(' '),
+  };
+}
+
+function executionBindingMatches(
+  actual: FeishuConfirmationExecutionBinding | undefined,
+  expected: FeishuConfirmationExecutionBinding,
+): boolean {
+  return actual?.toolName === expected.toolName && actual.signature === expected.signature;
+}
+
 function validateBrowserActConfirmation(args: string[], confirmationPlanId?: string) {
   const confirmationRequired = requiresBrowserActConfirmation(args);
+  const requiredConfirmationBinding = confirmationRequired ? createBrowserActExecutionBinding(args) : undefined;
   if (!confirmationRequired) {
     return {
       confirmationRequired: false,
       confirmationStatus: undefined,
+      requiredConfirmationBinding,
     };
   }
 
@@ -333,7 +356,8 @@ function validateBrowserActConfirmation(args: string[], confirmationPlanId?: str
     return {
       confirmationRequired: true,
       confirmationStatus: undefined,
-      error: '该 BrowserAct 命令看起来会产生线上写入或副作用。请先调用 feishu_confirmation 发送飞书确认卡片，并在用户确认后把 confirmationPlanId 传给 browser_act 再执行。',
+      requiredConfirmationBinding,
+      error: '该 BrowserAct 命令看起来会产生线上写入或副作用。请先调用 feishu_confirmation 发送飞书确认卡片，把本结果 details.requiredConfirmationBinding 原样作为 execution_binding 传入；用户确认后，把 confirmationPlanId 传给 browser_act 再执行。',
     };
   }
 
@@ -342,6 +366,7 @@ function validateBrowserActConfirmation(args: string[], confirmationPlanId?: str
     return {
       confirmationRequired: true,
       confirmationStatus: undefined,
+      requiredConfirmationBinding,
       error: `未找到飞书确认计划：${confirmationPlanId}。请重新发送 feishu_confirmation 确认卡片。`,
     };
   }
@@ -355,13 +380,27 @@ function validateBrowserActConfirmation(args: string[], confirmationPlanId?: str
     return {
       confirmationRequired: true,
       confirmationStatus: plan.status,
+      requiredConfirmationBinding,
       error: `飞书确认计划 ${confirmationPlanId} ${statusText}，不能执行该 BrowserAct 写入动作。`,
+    };
+  }
+
+  if (!executionBindingMatches(plan.executionBinding, requiredConfirmationBinding!)) {
+    return {
+      confirmationRequired: true,
+      confirmationStatus: plan.status,
+      requiredConfirmationBinding,
+      confirmationBindingMatched: false,
+      planExecutionBinding: plan.executionBinding,
+      error: `飞书确认计划 ${confirmationPlanId} 的 executionBinding 与当前 BrowserAct 写入命令不匹配，请重新确认后再执行。`,
     };
   }
 
   return {
     confirmationRequired: true,
     confirmationStatus: plan.status,
+    requiredConfirmationBinding,
+    confirmationBindingMatched: true,
   };
 }
 
@@ -390,7 +429,7 @@ export const browserActToolPlugin: ToolPlugin = {
 1. 每个 DeepBot 会话第一次调用必须是 args: ["get-skills", "core", "--skill-version", "2.0.2"]。
 2. args 只传 BrowserAct 参数，不要包含 browser-act 二进制名称。
 3. 生产任务只允许一个执行器控制一个账号浏览器；不要和内置 browser 工具混用同一个账号会话。
-4. 涉及保存、提交、发布、删除、上下架、改价、改电话、应用模板等副作用动作前，必须先调用 feishu_confirmation 发送确认卡片；用户确认后，把 confirmationPlanId 传给本工具。
+4. 涉及保存、提交、发布、删除、上下架、改价、改电话、应用模板等副作用动作前，必须先调用 feishu_confirmation 发送确认卡片，并把本工具返回的 details.requiredConfirmationBinding 原样作为 feishu_confirmation.execution_binding；用户确认后，把 confirmationPlanId 传给本工具。
 5. 工具会阻断 browser delete、proxy buy-request、auth clear、cookies clear 等基础设施破坏命令。
 
 配置：可用 BROWSER_ACT_BIN 指定 BrowserAct 二进制路径；未配置时优先尝试 ~/.local/bin/browser-act，最后使用 PATH 中的 browser-act。`,
@@ -433,6 +472,9 @@ export const browserActToolPlugin: ToolPlugin = {
                 command: args,
                 confirmationRequired: confirmation.confirmationRequired,
                 confirmationStatus: confirmation.confirmationStatus,
+                requiredConfirmationBinding: confirmation.requiredConfirmationBinding,
+                confirmationBindingMatched: confirmation.confirmationBindingMatched,
+                planExecutionBinding: confirmation.planExecutionBinding,
               },
               isError: true,
             };
@@ -468,6 +510,8 @@ export const browserActToolPlugin: ToolPlugin = {
               confirmationRequired: confirmation.confirmationRequired,
               confirmationStatus: confirmation.confirmationStatus,
               confirmationPlanId: params?.confirmationPlanId,
+              executionBinding: confirmation.requiredConfirmationBinding,
+              confirmationBindingMatched: confirmation.confirmationBindingMatched,
               browserActArtifacts: artifactImport.paths,
               browserActArtifactWarnings: artifactImport.warnings,
             },

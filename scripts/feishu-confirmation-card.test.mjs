@@ -123,6 +123,11 @@ test('feishu confirmation tool sends a card and records pending confirmation', a
     requester_id: 'ou_requester',
     requester_name: '小王',
     details: { 门店: '趣东北', 平台: '美团' },
+    execution_binding: {
+      toolName: 'browser_act',
+      signature: 'signature_price_change_1',
+      summary: 'browser_act click button:保存',
+    },
   });
 
   assert.equal(result.details.success, true);
@@ -134,6 +139,12 @@ test('feishu confirmation tool sends a card and records pending confirmation', a
   assert.equal(plan.status, 'pending');
   assert.equal(plan.messageId, 'om_confirmation_card');
   assert.equal(plan.riskLevel, 'high');
+  assert.deepEqual(plan.executionBinding, {
+    toolName: 'browser_act',
+    signature: 'signature_price_change_1',
+    summary: 'browser_act click button:保存',
+  });
+  assert.deepEqual(result.details.executionBinding, plan.executionBinding);
 });
 
 test('card callback approves and rejects confirmation plans through Gateway', async () => {
