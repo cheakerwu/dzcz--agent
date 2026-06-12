@@ -336,6 +336,76 @@ test('browser-act writes execution result back to the confirmation audit record'
   }
 });
 
+test('browser-act updates the original Feishu confirmation card with execution result', async () => {
+  const tempRoot = mkdtempSync(join(tmpdir(), 'browser-act-confirmation-card-update-'));
+  const previousBin = process.env.BROWSER_ACT_BIN;
+  const previousCalls = process.env.FAKE_BROWSER_ACT_CALLS;
+  const { binPath, callsPath } = createFakeBrowserActBinary(tempRoot);
+  const updatedCards = [];
+
+  process.env.BROWSER_ACT_BIN = binPath;
+  process.env.FAKE_BROWSER_ACT_CALLS = callsPath;
+
+  try {
+    const { auditStore, confirmationStore } = createIsolatedFeishuConfirmationDependencies(tempRoot);
+    const writeArgs = ['--session', 'merchant-demo', 'click', 'button:保存'];
+
+    confirmationStore.create({
+      planId: 'approved_with_card_update',
+      title: '保存门店资料',
+      summary: '点击保存按钮',
+      riskLevel: 'high',
+      messageId: 'om_confirmation_card',
+      executionBinding: createBrowserActExecutionBinding(writeArgs),
+    });
+    confirmationStore.approve('approved_with_card_update', {
+      operatorId: 'ou_reviewer',
+      operatorName: 'Reviewer',
+      decidedAt: 2000,
+    });
+
+    const tool = createToolWithFakeBinary(tempRoot, {
+      confirmationStore,
+      confirmationAuditStore: auditStore,
+      updateFeishuInteractiveCard: async (messageId, card) => {
+        updatedCards.push({ messageId, card });
+      },
+    });
+    await loadGuide(tool);
+
+    const result = await tool.execute('write-with-execution-card-update', {
+      args: writeArgs,
+      confirmationPlanId: 'approved_with_card_update',
+    });
+
+    assert.equal(result.isError, false);
+    assert.equal(updatedCards.length, 1);
+    assert.equal(updatedCards[0].messageId, 'om_confirmation_card');
+    const cardBody = JSON.stringify(updatedCards[0].card);
+    assert.match(updatedCards[0].card.header.title.content, /执行完成/);
+    assert.match(cardBody, /BrowserAct command executed/);
+    assert.match(cardBody, /browser_act/);
+    assert.doesNotMatch(cardBody, /feishu_confirmation_approve/);
+    assert.doesNotMatch(cardBody, /feishu_confirmation_reject/);
+    assert.deepEqual(readFakeBrowserActCalls(callsPath), [
+      ['get-skills', 'core', '--skill-version', '2.0.2'],
+      writeArgs,
+    ]);
+  } finally {
+    if (previousBin === undefined) {
+      delete process.env.BROWSER_ACT_BIN;
+    } else {
+      process.env.BROWSER_ACT_BIN = previousBin;
+    }
+    if (previousCalls === undefined) {
+      delete process.env.FAKE_BROWSER_ACT_CALLS;
+    } else {
+      process.env.FAKE_BROWSER_ACT_CALLS = previousCalls;
+    }
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test('browser-act read-only commands do not require Feishu confirmation', async () => {
   const tempRoot = mkdtempSync(join(tmpdir(), 'browser-act-confirmation-readonly-'));
   const previousBin = process.env.BROWSER_ACT_BIN;

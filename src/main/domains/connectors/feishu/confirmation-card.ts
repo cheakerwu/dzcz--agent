@@ -178,17 +178,95 @@ function formatDecisionTime(timestamp?: number): string {
   return new Date(timestamp).toLocaleString('zh-CN');
 }
 
+function basenameForDisplay(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() || path;
+}
+
+function buildExecutionResultElements(input: FeishuConfirmationPlan): any[] {
+  if (!input.executionStatus) {
+    return [];
+  }
+
+  const completed = input.executionStatus === 'completed';
+  const artifacts = (input.executionArtifacts || [])
+    .slice(0, 5)
+    .map((artifact) => `- ${basenameForDisplay(artifact)}`)
+    .join('\n');
+  const stdoutPreview = input.executionStdoutPreview?.trim();
+  const stderrPreview = input.executionStderrPreview?.trim();
+  const outputPreview = stdoutPreview || stderrPreview;
+  const errorText = input.executionError?.trim();
+
+  const elements: any[] = [
+    {
+      tag: 'div',
+      text: {
+        tag: 'lark_md',
+        content: [
+          `**执行状态：** ${completed ? '已完成' : '失败'}`,
+          `**执行工具：** ${input.executionToolName || '未记录'}`,
+          `**退出码：** ${input.executionExitCode ?? '未记录'}`,
+          `**执行时间：** ${formatDecisionTime(input.executedAt)}`,
+        ].join('\n'),
+      },
+    },
+  ];
+
+  if (artifacts) {
+    elements.push({
+      tag: 'div',
+      text: {
+        tag: 'lark_md',
+        content: `**证据文件：**\n${artifacts}`,
+      },
+    });
+  }
+
+  if (errorText) {
+    elements.push({
+      tag: 'div',
+      text: {
+        tag: 'lark_md',
+        content: `**失败原因：**\n${errorText}`,
+      },
+    });
+  }
+
+  if (outputPreview) {
+    elements.push({
+      tag: 'div',
+      text: {
+        tag: 'lark_md',
+        content: `**执行输出摘要：**\n${outputPreview}`,
+      },
+    });
+  }
+
+  return elements;
+}
+
 export function buildFeishuConfirmationTerminalCard(input: FeishuConfirmationPlan): Record<string, any> {
   const detailText = summarizeConfirmationDetails(input.details);
   const requester = input.requesterName || input.requesterId || '未记录';
   const approved = input.status === 'approved';
   const rejected = input.status === 'rejected';
-  const title = approved ? '操作已确认' : rejected ? '操作已取消' : '确认已结束';
-  const template = approved ? 'green' : rejected ? 'grey' : 'orange';
+  const executionCompleted = input.executionStatus === 'completed';
+  const executionFailed = input.executionStatus === 'failed';
+  const title = executionCompleted
+    ? '操作执行完成'
+    : executionFailed
+      ? '操作执行失败'
+      : approved
+        ? '操作已确认'
+        : rejected
+          ? '操作已取消'
+          : '确认已结束';
+  const template = executionFailed ? 'red' : approved || executionCompleted ? 'green' : rejected ? 'grey' : 'orange';
   const operator = approved
     ? input.approvedByName || input.approvedById || '未记录'
     : input.rejectedByName || input.rejectedById || '未记录';
   const decidedAt = approved ? input.approvedAt : input.rejectedAt;
+  const executionElements = buildExecutionResultElements(input);
 
   return {
     config: { wide_screen_mode: true },
@@ -226,12 +304,19 @@ export function buildFeishuConfirmationTerminalCard(input: FeishuConfirmationPla
           content: `**操作详情：**\n${detailText}`,
         },
       },
+      ...executionElements,
       {
         tag: 'note',
         elements: [
           {
             tag: 'plain_text',
-            content: approved ? '该操作已获得确认，系统将继续执行。' : '该操作已被取消，不会继续执行。',
+            content: executionCompleted
+              ? '操作已执行完成，审计记录和证据已保存。'
+              : executionFailed
+                ? '操作执行失败，请查看失败原因并按需重新发起。'
+                : approved
+                  ? '该操作已获得确认，系统将继续执行。'
+                  : '该操作已被取消，不会继续执行。',
           },
         ],
       },

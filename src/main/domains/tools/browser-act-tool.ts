@@ -16,6 +16,7 @@ import {
   validateBrowserActArgs,
 } from './browser-act-command';
 import {
+  buildFeishuConfirmationTerminalCard,
   type FeishuConfirmationExecutionBinding,
   type FeishuConfirmationStore,
   globalFeishuConfirmationStore,
@@ -65,6 +66,8 @@ interface BrowserActArtifactImportOutcome {
   replacement: string;
   importedPath?: string;
 }
+
+type FeishuCardUpdater = (messageId: string, card: Record<string, any>) => Promise<void>;
 
 function clampTimeoutSeconds(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -356,6 +359,17 @@ function getDefaultFeishuConfirmationAuditStore(): FeishuConfirmationAuditStore 
   }
 }
 
+function getDefaultFeishuCardUpdater(): FeishuCardUpdater | undefined {
+  return async (messageId, card) => {
+    const { getGatewayInstance } = require('../../infrastructure/gateway/gateway');
+    const gateway = getGatewayInstance();
+    if (!gateway?.updateFeishuInteractiveCard) {
+      return;
+    }
+    await gateway.updateFeishuInteractiveCard(messageId, card);
+  };
+}
+
 function previewExecutionOutput(value: string): string | undefined {
   if (!value) {
     return undefined;
@@ -449,6 +463,8 @@ export const browserActToolPlugin: ToolPlugin = {
       options.dependencies?.confirmationStore || globalFeishuConfirmationStore;
     const confirmationAuditStore: FeishuConfirmationAuditStore | undefined =
       options.dependencies?.confirmationAuditStore || getDefaultFeishuConfirmationAuditStore();
+    const updateFeishuInteractiveCard: FeishuCardUpdater | undefined =
+      options.dependencies?.updateFeishuInteractiveCard || getDefaultFeishuCardUpdater();
 
     return {
       name: TOOL_NAMES.BROWSER_ACT,
@@ -522,8 +538,9 @@ export const browserActToolPlugin: ToolPlugin = {
             coreGuideLoaded = true;
           }
 
+          let confirmationCardUpdateWarning: string | undefined;
           if (params?.confirmationPlanId && confirmation.confirmationRequired && confirmation.confirmationBindingMatched) {
-            confirmationAuditStore?.recordExecutionResult(params.confirmationPlanId, {
+            const updatedPlan = confirmationAuditStore?.recordExecutionResult(params.confirmationPlanId, {
               status: success ? 'completed' : 'failed',
               toolName: TOOL_NAMES.BROWSER_ACT,
               exitCode: result.exitCode,
@@ -532,6 +549,14 @@ export const browserActToolPlugin: ToolPlugin = {
               stdoutPreview: previewExecutionOutput(artifactImport.result.stdout),
               stderrPreview: previewExecutionOutput(artifactImport.result.stderr),
             });
+
+            if (updatedPlan?.messageId && updateFeishuInteractiveCard) {
+              try {
+                await updateFeishuInteractiveCard(updatedPlan.messageId, buildFeishuConfirmationTerminalCard(updatedPlan));
+              } catch (error) {
+                confirmationCardUpdateWarning = getErrorMessage(error);
+              }
+            }
           }
 
           return {
@@ -554,6 +579,7 @@ export const browserActToolPlugin: ToolPlugin = {
               confirmationPlanId: params?.confirmationPlanId,
               executionBinding: confirmation.requiredConfirmationBinding,
               confirmationBindingMatched: confirmation.confirmationBindingMatched,
+              confirmationCardUpdateWarning,
               browserActArtifacts: artifactImport.paths,
               browserActArtifactWarnings: artifactImport.warnings,
             },

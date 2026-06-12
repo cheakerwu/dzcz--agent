@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const {
   buildFeishuConfirmationCard,
+  buildFeishuConfirmationTerminalCard,
   createConfirmationPlanId,
   createFeishuConfirmationStore,
   globalFeishuConfirmationStore,
@@ -47,6 +48,61 @@ test('buildFeishuConfirmationCard renders risk details and confirm/cancel action
   assert.match(body, /锅包肉套餐/);
   assert.match(body, /feishu_confirmation_approve/);
   assert.match(body, /feishu_confirmation_reject/);
+});
+
+test('buildFeishuConfirmationTerminalCard renders execution result and evidence after a confirmed operation runs', () => {
+  const completedCard = buildFeishuConfirmationTerminalCard({
+    planId: 'confirm_execution_done',
+    title: '保存门店资料',
+    summary: '点击保存按钮',
+    riskLevel: 'high',
+    requesterName: '小王',
+    details: { 门店: '趣东北', 平台: '美团' },
+    status: 'approved',
+    createdAt: 1000,
+    approvedByName: '店长',
+    approvedAt: 2000,
+    executionStatus: 'completed',
+    executionToolName: 'browser_act',
+    executionExitCode: 0,
+    executionArtifacts: ['/tmp/browseract-proof.png'],
+    executionStdoutPreview: 'BrowserAct command executed: click button:保存',
+    executedAt: 3000,
+  });
+
+  const completedBody = JSON.stringify(completedCard);
+  assert.match(completedCard.header.title.content, /执行完成/);
+  assert.equal(completedCard.header.template, 'green');
+  assert.match(completedBody, /browser_act/);
+  assert.match(completedBody, /browseract-proof\.png/);
+  assert.match(completedBody, /BrowserAct command executed/);
+  assert.doesNotMatch(completedBody, /feishu_confirmation_approve/);
+  assert.doesNotMatch(completedBody, /feishu_confirmation_reject/);
+
+  const failedCard = buildFeishuConfirmationTerminalCard({
+    planId: 'confirm_execution_failed',
+    title: '发布活动',
+    summary: '点击发布按钮',
+    riskLevel: 'critical',
+    requesterName: '小王',
+    details: { 门店: '趣东北', 平台: '美团' },
+    status: 'approved',
+    createdAt: 1000,
+    approvedByName: '店长',
+    approvedAt: 2000,
+    executionStatus: 'failed',
+    executionToolName: 'browser_act',
+    executionExitCode: 1,
+    executionError: '页面元素不存在',
+    executionStderrPreview: 'button:发布 not found',
+    executedAt: 3000,
+  });
+
+  const failedBody = JSON.stringify(failedCard);
+  assert.match(failedCard.header.title.content, /执行失败/);
+  assert.equal(failedCard.header.template, 'red');
+  assert.match(failedBody, /页面元素不存在/);
+  assert.match(failedBody, /button:发布 not found/);
 });
 
 test('confirmation store tracks pending, approved, and rejected plans', () => {
