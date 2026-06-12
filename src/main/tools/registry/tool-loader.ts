@@ -44,6 +44,9 @@ import { feishuBitableToolPlugin } from '../feishu-bitable-tool';
 import { ocrToolPlugin } from '../ocr-tool';
 import { mcpAdapterToolPlugin } from '../mcp-adapter';
 import { skillLoaderPlugin } from '../skill-loader';
+import { storeSessionToolPlugin } from '../store-session-tool';
+import { storeImportToolPlugin } from '../store-import-tool';
+import { storeManagementToolPlugin } from '../store-management-tool';
 
 /**
  * 解析 plugin.create() 的返回值，统一处理 Promise 和数组/单个工具
@@ -260,6 +263,15 @@ export class ToolLoader {
       } catch (error) {
         console.warn('⚠️ Skill Loader 加载失败（不影响其他工具）:', error);
       }
+
+      // 门店登录态工具
+      tools.push(...await resolvePluginTools(storeSessionToolPlugin.create(pluginOpts)));
+
+      // 门店批量导入工具
+      tools.push(...await resolvePluginTools(storeImportToolPlugin.create(pluginOpts)));
+
+      // 门店管理工具
+      tools.push(...await resolvePluginTools(storeManagementToolPlugin.create(pluginOpts)));
 
     } catch (error) {
       console.error('❌ 加载内置工具失败:', error);

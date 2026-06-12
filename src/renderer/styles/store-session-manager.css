@@ -1,0 +1,570 @@
+/* 门店登录态管理组件样式 */
+
+.store-session-manager {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+}
+
+.store-session-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.store-session-manager-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.store-session-manager-header .close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+.store-session-manager-content {
+  display: flex;
+  flex: 1;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+/* 左侧：门店列表 */
+.store-list-panel {
+  width: 400px;
+  background: #fff;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+}
+
+.store-list-header {
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.action-buttons button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.action-buttons button:hover {
+  background: #f0f0f0;
+}
+
+/* 新建门店表单 */
+.create-store-form {
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f9f9f9;
+}
+
+.create-store-form input {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.form-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.form-actions button.primary {
+  background: #1890ff;
+  color: #fff;
+}
+
+.form-actions button.primary:hover {
+  background: #40a9ff;
+}
+
+.form-actions button.secondary {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.form-actions button.secondary:hover {
+  background: #e0e0e0;
+}
+
+/* 门店列表 */
+.store-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.loading {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+}
+
+.store-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.store-item:hover {
+  background: #f5f5f5;
+}
+
+.store-item.selected {
+  background: #e6f7ff;
+  border-left: 3px solid #1890ff;
+}
+
+.store-status-icon {
+  margin-right: 12px;
+  margin-top: 2px;
+}
+
+.icon-green {
+  color: #52c41a;
+}
+
+.icon-yellow {
+  color: #faad14;
+}
+
+.icon-red {
+  color: #ff4d4f;
+}
+
+.store-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.store-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.store-details {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.store-details .brand {
+  margin-right: 8px;
+}
+
+.store-details .location {
+  color: #666;
+}
+
+.store-aliases {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+.store-platforms {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.platform-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.platform-tag.meituan {
+  background: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+.platform-tag.eleme {
+  background: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+}
+
+.platform-tag.jd {
+  background: #fff1f0;
+  color: #ff4d4f;
+  border: 1px solid #ffa39e;
+}
+
+/* 右侧：配置详情 */
+.config-detail-panel {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.store-detail {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+}
+
+.store-detail-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.store-detail-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.store-meta {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.store-meta .brand {
+  margin-right: 12px;
+}
+
+.store-meta .location {
+  color: #999;
+}
+
+.platform-config-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.platform-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.platform-config-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.platform-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.platform-name {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 60px;
+}
+
+.platform-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.platform-status.configured {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.platform-status.not-configured {
+  background: #fff2f0;
+  color: #ff4d4f;
+  border: 1px solid #ffccc7;
+}
+
+.platform-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.platform-actions button {
+  padding: 6px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.platform-actions button:hover {
+  background: #f0f0f0;
+}
+
+.platform-actions button.test {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+.platform-actions button.test:hover {
+  background: #e6f7ff;
+}
+
+.quick-actions {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.quick-actions button.primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #1890ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.quick-actions button.primary:hover {
+  background: #40a9ff;
+}
+
+/* 未选择门店时的提示 */
+.no-store-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+}
+
+.no-store-selected p {
+  margin-top: 16px;
+  font-size: 16px;
+}
+
+/* 配置对话框 */
+.platform-config-dialog {
+  margin-top: 20px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.platform-config-dialog .dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.platform-config-dialog .dialog-header h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.platform-config-dialog .dialog-header .close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 4px;
+}
+
+.platform-config-dialog .dialog-header .close-button:hover {
+  color: #333;
+}
+
+.platform-config-dialog .dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.platform-config-dialog .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.platform-config-dialog .form-group label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.platform-config-dialog .form-group input,
+.platform-config-dialog .form-group textarea {
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  color: #333;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.platform-config-dialog .form-group input:focus,
+.platform-config-dialog .form-group textarea:focus {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.platform-config-dialog .form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.platform-config-dialog .mode-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.platform-config-dialog .mode-selector button {
+  flex: 1;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.platform-config-dialog .mode-selector button:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.platform-config-dialog .mode-selector button.active {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: #fff;
+}
+
+.platform-config-dialog .help-text {
+  font-size: 11px;
+  color: #999;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.platform-config-dialog .error-message {
+  padding: 8px 12px;
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 4px;
+  color: #ff4d4f;
+  font-size: 12px;
+}
+
+.platform-config-dialog .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.platform-config-dialog .dialog-actions button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.platform-config-dialog .dialog-actions button.secondary {
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  color: #666;
+}
+
+.platform-config-dialog .dialog-actions button.secondary:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.platform-config-dialog .dialog-actions button.primary {
+  background: #1890ff;
+  border: 1px solid #1890ff;
+  color: #fff;
+}
+
+.platform-config-dialog .dialog-actions button.primary:hover {
+  background: #40a9ff;
+  border-color: #40a9ff;
+}
+
+.platform-config-dialog .dialog-actions button.primary:disabled {
+  background: #d9d9d9;
+  border-color: #d9d9d9;
+  cursor: not-allowed;
+}

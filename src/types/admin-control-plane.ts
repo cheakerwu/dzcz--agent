@@ -38,6 +38,7 @@ export interface CreateStoreInput {
   city?: string;
   area?: string;
   platformStoreId?: string;
+  aliases?: string[];
   status?: StoreStatus;
   notes?: string;
 }
@@ -49,6 +50,7 @@ export interface AdminStore {
   city?: string;
   area?: string;
   platformStoreId?: string;
+  aliases: string[];
   status: StoreStatus;
   notes?: string;
   activeMemoryCount: number;

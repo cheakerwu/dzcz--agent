@@ -110,7 +110,25 @@ export const TOOL_NAMES = {
   FEISHU_BITABLE_BATCH_CREATE: 'feishu_bitable_batch_create',
   FEISHU_BITABLE_UPDATE_RECORD: 'feishu_bitable_update_record',
   FEISHU_STORE_CONFIG: 'feishu_store_config',
-  
+
+  // 门店登录态工具
+  STORE_SESSION_MATCH: 'store_session_match',
+  STORE_SESSION_CREATE: 'store_session_create',
+  STORE_SESSION_UPDATE: 'store_session_update',
+  STORE_SESSION_TEST: 'store_session_test',
+  STORE_SESSION_DELETE: 'store_session_delete',
+
+  // 门店批量导入工具
+  STORE_IMPORT: 'store_import',
+  STORE_EXPORT: 'store_export',
+
+  // 门店管理工具
+  STORE_CREATE: 'store_create',
+  STORE_UPDATE: 'store_update',
+  STORE_DELETE: 'store_delete',
+  STORE_LIST: 'store_list',
+  STORE_GET: 'store_get',
+
   // AI 对话工具
   CHAT: 'chat',
   
