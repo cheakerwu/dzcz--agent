@@ -1,5 +1,6 @@
 export type FeishuConfirmationRiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type FeishuConfirmationStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+export type FeishuConfirmationExecutionStatus = 'completed' | 'failed';
 
 export interface FeishuConfirmationExecutionBinding {
   toolName: string;
@@ -31,6 +32,14 @@ export interface FeishuConfirmationPlan extends FeishuConfirmationPlanInput {
   rejectedById?: string;
   rejectedByName?: string;
   rejectedAt?: number;
+  executionStatus?: FeishuConfirmationExecutionStatus;
+  executionToolName?: string;
+  executionExitCode?: number | null;
+  executionError?: string;
+  executionArtifacts?: string[];
+  executionStdoutPreview?: string;
+  executionStderrPreview?: string;
+  executedAt?: number;
 }
 
 export interface FeishuConfirmationDecisionInput {

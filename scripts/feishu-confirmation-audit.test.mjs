@@ -70,6 +70,21 @@ test('Feishu confirmation audit store persists plan lifecycle and audit events',
     assert.equal(persisted.approvedById, 'ou_admin');
     assert.equal(persisted.approvedAt, 2000);
 
+    const executed = auditStore.recordExecutionResult('confirm_audit_plan_1', {
+      status: 'completed',
+      toolName: 'browser_act',
+      exitCode: 0,
+      artifacts: ['/tmp/browseract-proof.png'],
+      stdoutPreview: '保存成功',
+      stderrPreview: '',
+      executedAt: 2500,
+    });
+    assert.equal(executed.executionStatus, 'completed');
+    assert.equal(executed.executionToolName, 'browser_act');
+    assert.equal(executed.executionExitCode, 0);
+    assert.deepEqual(executed.executionArtifacts, ['/tmp/browseract-proof.png']);
+    assert.equal(executed.executedAt, 2500);
+
     confirmationStore.create({
       planId: 'confirm_audit_plan_2',
       title: '活动删除确认',
@@ -106,6 +121,7 @@ test('Feishu confirmation audit store persists plan lifecycle and audit events',
     assert.deepEqual(auditEvents.map((event) => event.action), [
       'feishu_confirmation.created',
       'feishu_confirmation.approved',
+      'feishu_confirmation.execution_completed',
       'feishu_confirmation.created',
       'feishu_confirmation.rejected',
     ]);
@@ -113,6 +129,7 @@ test('Feishu confirmation audit store persists plan lifecycle and audit events',
     assert.equal(auditEvents[1].actor_id, 'ou_admin');
     assert.equal(auditEvents[1].risk_level, 'high');
     assert.match(auditEvents[1].changes_json, /sig_browser_save/);
+    assert.match(auditEvents[2].changes_json, /browseract-proof/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

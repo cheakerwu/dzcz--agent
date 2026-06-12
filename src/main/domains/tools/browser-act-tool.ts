@@ -17,14 +17,17 @@ import {
 } from './browser-act-command';
 import {
   type FeishuConfirmationExecutionBinding,
+  type FeishuConfirmationStore,
   globalFeishuConfirmationStore,
 } from '../connectors/feishu/confirmation-card';
+import type { FeishuConfirmationAuditStore } from '../connectors/feishu/confirmation-audit-store';
 
 const DEFAULT_TIMEOUT_SECONDS = 120;
 const MAX_TIMEOUT_SECONDS = 900;
 const NON_GUIDE_OUTPUT_LIMIT = 20_000;
 const DEFAULT_BROWSER_ACT_ARTIFACT_DIR = join(homedir(), '.deepbot', 'generated-images');
 const SUPPORTED_BROWSER_ACT_ARTIFACT_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
+const EXECUTION_RESULT_PREVIEW_LIMIT = 4_000;
 
 const BrowserActToolSchema = Type.Object({
   args: Type.Array(Type.String({
@@ -341,7 +344,30 @@ function executionBindingMatches(
   return actual?.toolName === expected.toolName && actual.signature === expected.signature;
 }
 
-function validateBrowserActConfirmation(args: string[], confirmationPlanId?: string) {
+function getDefaultFeishuConfirmationAuditStore(): FeishuConfirmationAuditStore | undefined {
+  try {
+    const { SystemConfigStore } = require('../../infrastructure/database/system-config-store');
+    const { FeishuConfirmationAuditStore } = require('../connectors/feishu/confirmation-audit-store');
+    const store = new FeishuConfirmationAuditStore(SystemConfigStore.getInstance().getDb());
+    store.ensureSchema();
+    return store;
+  } catch {
+    return undefined;
+  }
+}
+
+function previewExecutionOutput(value: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  return truncateOutput(value, EXECUTION_RESULT_PREVIEW_LIMIT);
+}
+
+function validateBrowserActConfirmation(
+  confirmationStore: FeishuConfirmationStore,
+  args: string[],
+  confirmationPlanId?: string,
+) {
   const confirmationRequired = requiresBrowserActConfirmation(args);
   const requiredConfirmationBinding = confirmationRequired ? createBrowserActExecutionBinding(args) : undefined;
   if (!confirmationRequired) {
@@ -361,7 +387,7 @@ function validateBrowserActConfirmation(args: string[], confirmationPlanId?: str
     };
   }
 
-  const plan = globalFeishuConfirmationStore.get(confirmationPlanId);
+  const plan = confirmationStore.get(confirmationPlanId);
   if (!plan) {
     return {
       confirmationRequired: true,
@@ -419,6 +445,10 @@ export const browserActToolPlugin: ToolPlugin = {
   create: (options: ToolCreateOptions) => {
     const binary = resolveBrowserActBinary();
     let coreGuideLoaded = false;
+    const confirmationStore: FeishuConfirmationStore =
+      options.dependencies?.confirmationStore || globalFeishuConfirmationStore;
+    const confirmationAuditStore: FeishuConfirmationAuditStore | undefined =
+      options.dependencies?.confirmationAuditStore || getDefaultFeishuConfirmationAuditStore();
 
     return {
       name: TOOL_NAMES.BROWSER_ACT,
@@ -458,7 +488,7 @@ export const browserActToolPlugin: ToolPlugin = {
             };
           }
 
-          const confirmation = validateBrowserActConfirmation(args, params?.confirmationPlanId);
+          const confirmation = validateBrowserActConfirmation(confirmationStore, args, params?.confirmationPlanId);
           if (confirmation.error) {
             return {
               content: [
@@ -490,6 +520,18 @@ export const browserActToolPlugin: ToolPlugin = {
 
           if (guideCommand && success) {
             coreGuideLoaded = true;
+          }
+
+          if (params?.confirmationPlanId && confirmation.confirmationRequired && confirmation.confirmationBindingMatched) {
+            confirmationAuditStore?.recordExecutionResult(params.confirmationPlanId, {
+              status: success ? 'completed' : 'failed',
+              toolName: TOOL_NAMES.BROWSER_ACT,
+              exitCode: result.exitCode,
+              error: result.error,
+              artifacts: artifactImport.paths,
+              stdoutPreview: previewExecutionOutput(artifactImport.result.stdout),
+              stderrPreview: previewExecutionOutput(artifactImport.result.stderr),
+            });
           }
 
           return {

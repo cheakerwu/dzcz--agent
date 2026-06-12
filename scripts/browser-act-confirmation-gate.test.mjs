@@ -45,13 +45,14 @@ function createBrowserActExecutionBinding(args) {
   };
 }
 
-function createToolWithFakeBinary(tempRoot) {
+function createToolWithFakeBinary(tempRoot, dependencies = {}) {
   const { browserActToolPlugin } = require('../dist-electron/main/domains/tools/browser-act-tool.js');
   const workspaceDir = join(tempRoot, 'workspace');
   mkdirSync(workspaceDir, { recursive: true });
   return browserActToolPlugin.create({
     workspaceDir,
     sessionId: `browser-act-confirmation-${Date.now()}`,
+    dependencies,
     configStore: {
       getWorkspaceSettings() {
         return {
@@ -63,6 +64,25 @@ function createToolWithFakeBinary(tempRoot) {
   });
 }
 
+function createIsolatedFeishuConfirmationDependencies(tempRoot) {
+  const { default: Database } = require('../dist-electron/shared/utils/sqlite-adapter.js');
+  const {
+    createFeishuConfirmationStore,
+  } = require('../dist-electron/main/domains/connectors/feishu/confirmation-card.js');
+  const {
+    FeishuConfirmationAuditStore,
+  } = require('../dist-electron/main/domains/connectors/feishu/confirmation-audit-store.js');
+
+  const db = new Database(join(tempRoot, 'audit.db'));
+  const auditStore = new FeishuConfirmationAuditStore(db);
+  auditStore.ensureSchema();
+  return {
+    db,
+    auditStore,
+    confirmationStore: createFeishuConfirmationStore({ auditStore }),
+  };
+}
+
 async function loadGuide(tool) {
   const result = await tool.execute('guide', {
     args: ['get-skills', 'core', '--skill-version', '2.0.2'],
@@ -71,10 +91,6 @@ async function loadGuide(tool) {
 }
 
 test('browser-act write-like commands require an approved Feishu confirmation before execution', async () => {
-  const {
-    globalFeishuConfirmationStore,
-  } = require('../dist-electron/main/domains/connectors/feishu/confirmation-card.js');
-
   const tempRoot = mkdtempSync(join(tmpdir(), 'browser-act-confirmation-'));
   const previousBin = process.env.BROWSER_ACT_BIN;
   const previousCalls = process.env.FAKE_BROWSER_ACT_CALLS;
@@ -84,7 +100,11 @@ test('browser-act write-like commands require an approved Feishu confirmation be
   process.env.FAKE_BROWSER_ACT_CALLS = callsPath;
 
   try {
-    const tool = createToolWithFakeBinary(tempRoot);
+    const {
+      auditStore: confirmationAuditStore,
+      confirmationStore,
+    } = createIsolatedFeishuConfirmationDependencies(tempRoot);
+    const tool = createToolWithFakeBinary(tempRoot, { confirmationStore, confirmationAuditStore });
     await loadGuide(tool);
 
     const blocked = await tool.execute('write-without-confirmation', {
@@ -106,7 +126,7 @@ test('browser-act write-like commands require an approved Feishu confirmation be
       ['get-skills', 'core', '--skill-version', '2.0.2'],
     ]);
 
-    globalFeishuConfirmationStore.create({
+    confirmationStore.create({
       planId: 'pending_browser_write',
       title: '保存门店资料',
       summary: '点击保存按钮',
@@ -123,14 +143,14 @@ test('browser-act write-like commands require an approved Feishu confirmation be
     assert.match(pending.content[0].text, /尚未确认|pending|等待确认/);
     assert.equal(pending.details.confirmationStatus, 'pending');
 
-    globalFeishuConfirmationStore.create({
+    confirmationStore.create({
       planId: 'rejected_browser_write',
       title: '保存门店资料',
       summary: '点击保存按钮',
       riskLevel: 'high',
       executionBinding: createBrowserActExecutionBinding(['--session', 'merchant-demo', 'click', 'button:保存']),
     });
-    globalFeishuConfirmationStore.reject('rejected_browser_write', {
+    confirmationStore.reject('rejected_browser_write', {
       operatorId: 'ou_reviewer',
       operatorName: 'Reviewer',
     });
@@ -144,14 +164,14 @@ test('browser-act write-like commands require an approved Feishu confirmation be
     assert.match(rejected.content[0].text, /已取消|rejected|拒绝/);
     assert.equal(rejected.details.confirmationStatus, 'rejected');
 
-    globalFeishuConfirmationStore.create({
+    confirmationStore.create({
       planId: 'approved_browser_write',
       title: '保存门店资料',
       summary: '点击保存按钮',
       riskLevel: 'high',
       executionBinding: createBrowserActExecutionBinding(['--session', 'merchant-demo', 'click', 'button:保存']),
     });
-    globalFeishuConfirmationStore.approve('approved_browser_write', {
+    confirmationStore.approve('approved_browser_write', {
       operatorId: 'ou_reviewer',
       operatorName: 'Reviewer',
     });
@@ -189,10 +209,6 @@ test('browser-act write-like commands require an approved Feishu confirmation be
 });
 
 test('browser-act approved confirmations are bound to the exact write command', async () => {
-  const {
-    globalFeishuConfirmationStore,
-  } = require('../dist-electron/main/domains/connectors/feishu/confirmation-card.js');
-
   const tempRoot = mkdtempSync(join(tmpdir(), 'browser-act-confirmation-binding-'));
   const previousBin = process.env.BROWSER_ACT_BIN;
   const previousCalls = process.env.FAKE_BROWSER_ACT_CALLS;
@@ -202,17 +218,21 @@ test('browser-act approved confirmations are bound to the exact write command', 
   process.env.FAKE_BROWSER_ACT_CALLS = callsPath;
 
   try {
-    const tool = createToolWithFakeBinary(tempRoot);
+    const {
+      auditStore: confirmationAuditStore,
+      confirmationStore,
+    } = createIsolatedFeishuConfirmationDependencies(tempRoot);
+    const tool = createToolWithFakeBinary(tempRoot, { confirmationStore, confirmationAuditStore });
     await loadGuide(tool);
 
-    globalFeishuConfirmationStore.create({
+    confirmationStore.create({
       planId: 'approved_save_only',
       title: '保存门店资料',
       summary: '点击保存按钮',
       riskLevel: 'high',
       executionBinding: createBrowserActExecutionBinding(['--session', 'merchant-demo', 'click', 'button:保存']),
     });
-    globalFeishuConfirmationStore.approve('approved_save_only', {
+    confirmationStore.approve('approved_save_only', {
       operatorId: 'ou_reviewer',
       operatorName: 'Reviewer',
     });
@@ -228,6 +248,78 @@ test('browser-act approved confirmations are bound to the exact write command', 
     assert.equal(mismatched.details.confirmationBindingMatched, false);
     assert.deepEqual(readFakeBrowserActCalls(callsPath), [
       ['get-skills', 'core', '--skill-version', '2.0.2'],
+    ]);
+  } finally {
+    if (previousBin === undefined) {
+      delete process.env.BROWSER_ACT_BIN;
+    } else {
+      process.env.BROWSER_ACT_BIN = previousBin;
+    }
+    if (previousCalls === undefined) {
+      delete process.env.FAKE_BROWSER_ACT_CALLS;
+    } else {
+      process.env.FAKE_BROWSER_ACT_CALLS = previousCalls;
+    }
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('browser-act writes execution result back to the confirmation audit record', async () => {
+  const tempRoot = mkdtempSync(join(tmpdir(), 'browser-act-confirmation-exec-audit-'));
+  const previousBin = process.env.BROWSER_ACT_BIN;
+  const previousCalls = process.env.FAKE_BROWSER_ACT_CALLS;
+  const { binPath, callsPath } = createFakeBrowserActBinary(tempRoot);
+
+  process.env.BROWSER_ACT_BIN = binPath;
+  process.env.FAKE_BROWSER_ACT_CALLS = callsPath;
+
+  try {
+    const { db, auditStore, confirmationStore } = createIsolatedFeishuConfirmationDependencies(tempRoot);
+    const writeArgs = ['--session', 'merchant-demo', 'click', 'button:保存'];
+
+    confirmationStore.create({
+      planId: 'approved_with_execution_audit',
+      title: '保存门店资料',
+      summary: '点击保存按钮',
+      riskLevel: 'high',
+      executionBinding: createBrowserActExecutionBinding(writeArgs),
+    });
+    confirmationStore.approve('approved_with_execution_audit', {
+      operatorId: 'ou_reviewer',
+      operatorName: 'Reviewer',
+      decidedAt: 2000,
+    });
+
+    const tool = createToolWithFakeBinary(tempRoot, { confirmationStore, confirmationAuditStore: auditStore });
+    await loadGuide(tool);
+
+    const result = await tool.execute('write-with-execution-audit', {
+      args: writeArgs,
+      confirmationPlanId: 'approved_with_execution_audit',
+    });
+
+    assert.equal(result.isError, false);
+    const persisted = auditStore.get('approved_with_execution_audit');
+    assert.equal(persisted.executionStatus, 'completed');
+    assert.equal(persisted.executionToolName, 'browser_act');
+    assert.equal(persisted.executionExitCode, 0);
+    assert.equal(persisted.executionError, undefined);
+    assert.match(persisted.executionStdoutPreview, /BrowserAct command executed/);
+
+    const auditEvents = db.prepare(`
+      SELECT action, entity_id, changes_json
+      FROM audit_events
+      WHERE entity_type = 'feishu_confirmation'
+      ORDER BY created_at ASC
+    `).all();
+    assert.ok(auditEvents.some((event) => (
+      event.action === 'feishu_confirmation.execution_completed'
+      && event.entity_id === 'approved_with_execution_audit'
+      && /BrowserAct command executed/.test(event.changes_json)
+    )));
+    assert.deepEqual(readFakeBrowserActCalls(callsPath), [
+      ['get-skills', 'core', '--skill-version', '2.0.2'],
+      writeArgs,
     ]);
   } finally {
     if (previousBin === undefined) {
