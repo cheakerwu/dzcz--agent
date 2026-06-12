@@ -82,7 +82,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
   const [browserActBrowsers, setBrowserActBrowsers] = useState<AdminBrowserActBrowser[]>([]);
   const [auditEvents, setAuditEvents] = useState<AdminAuditEvent[]>([]);
 
-  const [storeForm, setStoreForm] = useState({ name: '', brand: '点之出众', city: '', area: '' });
+  const [storeForm, setStoreForm] = useState({ name: '', brand: '点之出众', city: '', area: '', aliases: '' });
   const [employeeForm, setEmployeeForm] = useState({ connectorId: 'feishu', userId: '', displayName: '', role: 'operator' });
   const [conversationForm, setConversationForm] = useState({ connectorId: 'feishu', conversationId: '', chatType: 'group', name: '' });
   const [assignmentForm, setAssignmentForm] = useState({ employeeId: '', storeId: '', responsibility: 'owner' });
@@ -187,8 +187,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
 
   const submitStore = async (event: React.FormEvent) => {
     event.preventDefault();
-    await api.adminCreateStore({ ...storeForm, status: 'operating' });
-    setStoreForm({ name: '', brand: '点之出众', city: '', area: '' });
+    const aliases = storeForm.aliases ? storeForm.aliases.split(',').map(a => a.trim()).filter(a => a) : [];
+    await api.adminCreateStore({ ...storeForm, aliases, status: 'operating' });
+    setStoreForm({ name: '', brand: '点之出众', city: '', area: '', aliases: '' });
     await loadData();
   };
 
@@ -383,16 +384,19 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ isOpen, onClose }) =
                   <input value={storeForm.brand} onChange={(e) => setStoreForm({ ...storeForm, brand: e.target.value })} placeholder="品牌" />
                   <input value={storeForm.city} onChange={(e) => setStoreForm({ ...storeForm, city: e.target.value })} placeholder="城市" />
                   <input value={storeForm.area} onChange={(e) => setStoreForm({ ...storeForm, area: e.target.value })} placeholder="区域" />
+                  <input value={storeForm.aliases} onChange={(e) => setStoreForm({ ...storeForm, aliases: e.target.value })} placeholder="别名（多个用逗号分隔）" />
                   <button type="submit">新增门店</button>
                 </AdminForm>
-                <DataTable headers={['门店', '品牌', '位置', '状态', '活跃记忆']}>
+                <DataTable headers={['门店', '品牌', '位置', '别名', '状态', '活跃记忆', '平台']}>
                   {stores.map((store) => (
                     <tr key={store.id}>
                       <td>{store.name}</td>
                       <td>{store.brand || '-'}</td>
                       <td>{[store.city, store.area].filter(Boolean).join(' / ') || '-'}</td>
+                      <td>{store.aliases?.join(', ') || '-'}</td>
                       <td><StatusPill label={store.status} /></td>
                       <td>{store.activeMemoryCount}</td>
+                      <td>{platformAccounts.filter(p => p.storeId === store.id).map(p => p.platform).join(', ') || '-'}</td>
                     </tr>
                   ))}
                 </DataTable>

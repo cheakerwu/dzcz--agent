@@ -10,6 +10,7 @@ import { SkillManager } from './components/SkillManager';
 import { ScheduledTaskManager } from './components/ScheduledTaskManager';
 import { SystemSettings } from './components/SystemSettings';
 import { AdminConsole } from './components/AdminConsole';
+import { StoreSessionManager } from './components/StoreSessionManager';
 import { Message } from '../types/message';
 import type { AgentTab } from '../types/agent-tab';
 import { api } from './api';
@@ -50,6 +51,7 @@ function App() {
   const [isScheduledTaskManagerOpen, setIsScheduledTaskManagerOpen] = useState(false);
   const [isSystemSettingsOpen, setIsSystemSettingsOpen] = useState(false);
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState(false);
+  const [isStoreSessionManagerOpen, setIsStoreSessionManagerOpen] = useState(false);
   const [hasModelConfig, setHasModelConfig] = useState(true);
 
   // 全局 Toast
@@ -761,6 +763,7 @@ function App() {
         onOpenScheduledTaskManager={() => setIsScheduledTaskManagerOpen(true)}
         onOpenSystemSettings={() => setIsSystemSettingsOpen(true)}
         onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
+        onOpenStoreSessionManager={() => setIsStoreSessionManagerOpen(true)}
         tabs={tabs}
         activeTabId={activeTabId}
         onTabClick={handleSwitchTab}
@@ -810,6 +813,11 @@ function App() {
       <AdminConsole
         isOpen={isAdminConsoleOpen}
         onClose={() => setIsAdminConsoleOpen(false)}
+      />
+
+      <StoreSessionManager
+        isOpen={isStoreSessionManagerOpen}
+        onClose={() => setIsStoreSessionManagerOpen(false)}
       />
 
       {/* 全局 Toast */}

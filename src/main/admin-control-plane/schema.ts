@@ -15,12 +15,16 @@ export function initAdminControlPlaneTables(db: Database.Database): void {
       city TEXT,
       area TEXT,
       platform_store_id TEXT,
+      aliases TEXT,
       status TEXT NOT NULL DEFAULT 'operating',
       notes TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     )
   `);
+
+  // 添加 aliases 字段（如果不存在）
+  ensureColumn(db, 'stores', 'aliases', 'aliases TEXT');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS employees (

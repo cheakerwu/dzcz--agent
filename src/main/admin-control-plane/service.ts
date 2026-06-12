@@ -70,6 +70,7 @@ function mapStore(row: Row): AdminStore {
     city: optionalString(row.city),
     area: optionalString(row.area),
     platformStoreId: optionalString(row.platform_store_id),
+    aliases: safeJsonParse(row.aliases, []),
     status: row.status,
     notes: optionalString(row.notes),
     activeMemoryCount: Number(row.active_memory_count || 0),
@@ -285,8 +286,8 @@ export class AdminControlPlaneService {
     const timestamp = now();
     const id = createId('store');
     this.db.prepare(`
-      INSERT INTO stores (id, name, brand, city, area, platform_store_id, status, notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO stores (id, name, brand, city, area, platform_store_id, aliases, status, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       input.name.trim(),
@@ -294,6 +295,7 @@ export class AdminControlPlaneService {
       input.city ?? null,
       input.area ?? null,
       input.platformStoreId ?? null,
+      safeJsonStringify(input.aliases ?? []),
       input.status || 'operating',
       input.notes ?? null,
       timestamp,
@@ -329,14 +331,15 @@ export class AdminControlPlaneService {
       city: input.city ?? current.city ?? null,
       area: input.area ?? current.area ?? null,
       platformStoreId: input.platformStoreId ?? current.platformStoreId ?? null,
+      aliases: input.aliases ?? current.aliases,
       status: input.status ?? current.status,
       notes: input.notes ?? current.notes ?? null,
     };
     this.db.prepare(`
       UPDATE stores
-      SET name = ?, brand = ?, city = ?, area = ?, platform_store_id = ?, status = ?, notes = ?, updated_at = ?
+      SET name = ?, brand = ?, city = ?, area = ?, platform_store_id = ?, aliases = ?, status = ?, notes = ?, updated_at = ?
       WHERE id = ?
-    `).run(next.name, next.brand, next.city, next.area, next.platformStoreId, next.status, next.notes, now(), id);
+    `).run(next.name, next.brand, next.city, next.area, next.platformStoreId, safeJsonStringify(next.aliases), next.status, next.notes, now(), id);
     this.recordAuditEvent(actorId, 'store.updated', 'store', id, input, 'medium');
     return this.getStore(id);
   }
