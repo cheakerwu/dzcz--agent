@@ -10,6 +10,7 @@
 import { SessionStore, type SessionMessage } from './session-store';
 import { getErrorMessage } from '../../../shared/utils/error-handler';
 import type { Message } from '../../../types/message';
+import { SESSION_STOP_BOUNDARY_MARKER } from '../agent-runtime/session-boundary';
 
 /**
  * Session 管理器类
@@ -156,7 +157,9 @@ export class SessionManager {
    * 将 SessionMessage 转换为 UI Message
    */
   private convertToUIMessages(sessionMessages: SessionMessage[]): Message[] {
-    return sessionMessages.map((msg, index) => {
+    return sessionMessages
+      .filter(msg => msg.content !== SESSION_STOP_BOUNDARY_MARKER)
+      .map((msg, index) => {
       // 🔥 过滤掉系统指令和系统提示（作为保险，防止旧数据中有这些内容）
       let content = msg.content;
       content = content.replace(/\n\n\[系统指令\].*$/s, '');
@@ -194,4 +197,3 @@ export class SessionManager {
     return join(sessionDir, `${tabId}.jsonl`);
   }
 }
-

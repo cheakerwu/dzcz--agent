@@ -199,6 +199,8 @@ export class SessionStore {
         // 倒序构建轮次
         if (message.role === 'assistant') {
           currentRound.unshift(message);
+        } else if (message.role === 'system') {
+          currentRound.unshift(message);
         } else if (message.role === 'user') {
           currentRound.unshift(message);
           rounds.unshift(currentRound);
@@ -321,4 +323,3 @@ export class SessionStore {
     }
   }
 }
-

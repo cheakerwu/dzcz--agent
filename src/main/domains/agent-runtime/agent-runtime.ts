@@ -22,6 +22,7 @@ import { getErrorMessage } from '../../../shared/utils/error-handler';
 import type { TaskPlan } from '../../../types/task-plan';
 import { buildAdminMemoryPromptContextForSession } from '../admin-control-plane/prompt-context';
 import { buildFastModeSystemPrompt } from '../prompts/memory-sections';
+import { SESSION_STOP_BOUNDARY_MARKER } from './session-boundary';
 
 /**
  * Agent Runtime 类
@@ -336,8 +337,19 @@ export class AgentRuntime {
    */
   private convertSessionMessagesToAgentMessages(sessionMessages: any[]): any[] {
     const agentMessages: any[] = [];
+    let stopBoundaryIndex = -1;
+    for (let i = sessionMessages.length - 1; i >= 0; i--) {
+      const msg = sessionMessages[i];
+      if (msg.role === 'system' && msg.content === SESSION_STOP_BOUNDARY_MARKER) {
+        stopBoundaryIndex = i;
+        break;
+      }
+    }
+    const effectiveMessages = stopBoundaryIndex >= 0
+      ? sessionMessages.slice(stopBoundaryIndex + 1)
+      : sessionMessages;
 
-    for (const msg of sessionMessages) {
+    for (const msg of effectiveMessages) {
       if (msg.role === 'user') {
         // 🔥 用户消息必须使用数组格式，与 agent.prompt() 保持一致
         agentMessages.push({

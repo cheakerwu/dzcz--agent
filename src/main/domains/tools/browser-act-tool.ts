@@ -1,11 +1,13 @@
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { copyFileSync, existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { Type } from '@sinclair/typebox';
 import type { ToolPlugin, ToolCreateOptions } from './registry/tool-interface';
 import { TOOL_NAMES } from './tool-names';
 import { getErrorMessage } from '../../../shared/utils/error-handler';
+import { expandHomePath } from '../../infrastructure/utils/path-security';
+import { SystemConfigStore } from '../../infrastructure/database/system-config-store';
 import {
   isBrowserActCoreGuideCommand,
   truncateOutput,
@@ -15,6 +17,8 @@ import {
 const DEFAULT_TIMEOUT_SECONDS = 120;
 const MAX_TIMEOUT_SECONDS = 900;
 const NON_GUIDE_OUTPUT_LIMIT = 20_000;
+const DEFAULT_BROWSER_ACT_ARTIFACT_DIR = join(homedir(), '.deepbot', 'generated-images');
+const SUPPORTED_BROWSER_ACT_ARTIFACT_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
 
 const BrowserActToolSchema = Type.Object({
   args: Type.Array(Type.String({
@@ -39,6 +43,17 @@ interface BrowserActRunResult {
   error?: string;
 }
 
+interface BrowserActArtifactImportResult {
+  result: BrowserActRunResult;
+  paths: string[];
+  warnings: string[];
+}
+
+interface BrowserActArtifactImportOutcome {
+  replacement: string;
+  importedPath?: string;
+}
+
 function clampTimeoutSeconds(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return DEFAULT_TIMEOUT_SECONDS;
@@ -58,6 +73,132 @@ function resolveBrowserActBinary(): string {
   }
 
   return 'browser-act';
+}
+
+function resolveBrowserActScreenshotDir(): string {
+  if (process.platform === 'darwin') {
+    return join(homedir(), 'Library', 'Application Support', 'browseract', 'screenshots');
+  }
+  if (process.platform === 'win32') {
+    return join(process.env.APPDATA || join(homedir(), 'AppData', 'Roaming'), 'browseract', 'screenshots');
+  }
+  return join(process.env.XDG_DATA_HOME || join(homedir(), '.local', 'share'), 'browseract', 'screenshots');
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function isPathInsideDir(filePath: string, directory: string): boolean {
+  const relativePath = relative(resolve(directory), resolve(filePath));
+  return relativePath === '' || (!relativePath.startsWith('..') && !isAbsolute(relativePath));
+}
+
+function resolveBrowserActArtifactImageDir(options: ToolCreateOptions): string {
+  try {
+    const configStore = options.configStore || SystemConfigStore.getInstance();
+    const imageDir = configStore.getWorkspaceSettings()?.imageDir;
+    if (typeof imageDir === 'string' && imageDir.trim()) {
+      return resolve(expandHomePath(imageDir.trim()));
+    }
+  } catch {
+    // Fall back to the default image directory if settings are unavailable during tests or startup.
+  }
+  return DEFAULT_BROWSER_ACT_ARTIFACT_DIR;
+}
+
+function createBrowserActScreenshotPathRegex(): RegExp {
+  const screenshotDir = resolveBrowserActScreenshotDir();
+  const variants = new Set([
+    screenshotDir,
+    screenshotDir.replace(/\\/g, '/'),
+  ]);
+  const prefixPattern = Array.from(variants).map(escapeRegex).join('|');
+  return new RegExp(`(?:${prefixPattern})[/\\\\][^\\r\\n"'<>)]*?\\.(?:png|jpe?g|webp)`, 'gi');
+}
+
+function importBrowserActScreenshotArtifact(
+  rawPath: string,
+  imageDir: string,
+  copiedPaths: Map<string, string>,
+  warnings: string[],
+): BrowserActArtifactImportOutcome | null {
+  const sourcePath = resolve(rawPath);
+  const screenshotDir = resolveBrowserActScreenshotDir();
+
+  if (!isPathInsideDir(sourcePath, screenshotDir)) {
+    return null;
+  }
+
+  const extension = extname(sourcePath).toLowerCase();
+  if (!SUPPORTED_BROWSER_ACT_ARTIFACT_EXTENSIONS.has(extension)) {
+    return null;
+  }
+
+  const cachedPath = copiedPaths.get(sourcePath);
+  if (cachedPath) {
+    return {
+      replacement: cachedPath.replace(/\\/g, '/'),
+      importedPath: cachedPath,
+    };
+  }
+
+  try {
+    const sourceStats = lstatSync(sourcePath);
+    if (!sourceStats.isFile()) {
+      warnings.push(`Skipped BrowserAct artifact ${basename(sourcePath)} because it is not a regular file.`);
+      return { replacement: `[BrowserAct artifact unavailable: ${basename(sourcePath)}]` };
+    }
+
+    mkdirSync(imageDir, { recursive: true });
+    const destinationPath = resolve(imageDir, `browseract-${basename(sourcePath)}`);
+    if (!isPathInsideDir(destinationPath, imageDir)) {
+      warnings.push(`Skipped BrowserAct artifact ${basename(sourcePath)} because the destination path is invalid.`);
+      return { replacement: `[BrowserAct artifact unavailable: ${basename(sourcePath)}]` };
+    }
+
+    copyFileSync(sourcePath, destinationPath);
+    copiedPaths.set(sourcePath, destinationPath);
+    return {
+      replacement: destinationPath.replace(/\\/g, '/'),
+      importedPath: destinationPath,
+    };
+  } catch (error) {
+    warnings.push(`Failed to import BrowserAct artifact ${basename(sourcePath)}: ${getErrorMessage(error)}`);
+    return { replacement: `[BrowserAct artifact unavailable: ${basename(sourcePath)}]` };
+  }
+}
+
+function importBrowserActArtifacts(
+  result: BrowserActRunResult,
+  imageDir: string,
+): BrowserActArtifactImportResult {
+  const copiedPaths = new Map<string, string>();
+  const paths: string[] = [];
+  const warnings: string[] = [];
+
+  const rewriteText = (text: string): string => (
+    text.replace(createBrowserActScreenshotPathRegex(), (rawPath) => {
+      const outcome = importBrowserActScreenshotArtifact(rawPath, imageDir, copiedPaths, warnings);
+      if (!outcome) {
+        return rawPath;
+      }
+      if (outcome.importedPath && !paths.includes(outcome.importedPath)) {
+        paths.push(outcome.importedPath);
+      }
+      return outcome.replacement;
+    })
+  );
+
+  return {
+    result: {
+      ...result,
+      stdout: rewriteText(result.stdout),
+      stderr: rewriteText(result.stderr),
+    },
+    paths,
+    warnings,
+  };
 }
 
 function runBrowserAct(
@@ -230,6 +371,10 @@ export const browserActToolPlugin: ToolPlugin = {
 
           const timeoutSeconds = clampTimeoutSeconds(params?.timeoutSeconds);
           const result = await runBrowserAct(binary, args, options, timeoutSeconds, signal);
+          const artifactImport = importBrowserActArtifacts(
+            result,
+            resolveBrowserActArtifactImageDir(options),
+          );
           const success = result.exitCode === 0 && !result.timedOut && !result.aborted && !result.error;
 
           if (guideCommand && success) {
@@ -240,7 +385,7 @@ export const browserActToolPlugin: ToolPlugin = {
             content: [
               {
                 type: 'text',
-                text: formatBrowserActResult(binary, args, result, guideCommand),
+                text: formatBrowserActResult(binary, args, artifactImport.result, guideCommand),
               },
             ],
             details: {
@@ -251,6 +396,8 @@ export const browserActToolPlugin: ToolPlugin = {
               timedOut: result.timedOut,
               aborted: result.aborted,
               error: result.error,
+              browserActArtifacts: artifactImport.paths,
+              browserActArtifactWarnings: artifactImport.warnings,
             },
             isError: !success,
           };

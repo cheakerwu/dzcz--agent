@@ -16,6 +16,7 @@ import { sleep, waitUntil } from '../../../shared/utils/async-utils';
 import { generateMessageId, generateUserMessageId } from '../../../shared/utils/id-generator';
 import { sendToWindow } from '../../../shared/utils/webcontents-utils';
 import type { SessionManager } from '../../domains/sessions/session-manager';
+import { SESSION_STOP_BOUNDARY_MARKER } from '../../domains/agent-runtime/session-boundary';
 
 /**
  * 消息队列项
@@ -577,6 +578,9 @@ export class GatewayMessageHandler {
    */
   async handleStopGeneration(sessionId: string, resetSessionRuntimeFn: (sessionId: string, options: { reason?: string; recreate?: boolean }) => Promise<AgentRuntime | null>): Promise<void> {
     console.log(`[MessageHandler] 🛑 收到停止生成请求: ${sessionId}`);
+    if (this.sessionManager) {
+      await this.sessionManager.saveSystemMessage(sessionId, SESSION_STOP_BOUNDARY_MARKER);
+    }
     await resetSessionRuntimeFn(sessionId, {
       reason: 'WebSocket 断开连接或用户点击 Stop 按钮',
       recreate: false

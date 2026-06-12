@@ -25,6 +25,7 @@ import type { ConnectorManager } from '../../domains/connectors/connector-manage
 import type { GatewayTabManager } from './gateway-tab';
 import { setCurrentSenderIdForFeishuDocTool } from '../../domains/tools/feishu-doc-tool';
 import { getGatewayInstance } from './gateway';
+import { SESSION_STOP_BOUNDARY_MARKER } from '../../domains/agent-runtime/session-boundary';
 
 const logger = createLogger('ConnectorHandler');
 
@@ -904,6 +905,11 @@ export class GatewayConnectorHandler {
 
     // 3. 清除进度提醒定时器
     this.clearProgressTimers(sessionId);
+
+    if (this.sessionManager) {
+      await this.sessionManager.saveSystemMessage(sessionId, SESSION_STOP_BOUNDARY_MARKER);
+      logger.info('✅ 已写入 /stop 会话边界标记');
+    }
 
     logger.info('✅ /stop 指令已执行');
 
