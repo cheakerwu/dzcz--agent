@@ -2,6 +2,8 @@ const assert = require('node:assert/strict');
 
 const {
   isBrowserActCoreGuideCommand,
+  classifyBrowserActCommandRisk,
+  requiresBrowserActConfirmation,
   validateBrowserActArgs,
   truncateOutput,
 } = require('../dist-electron/main/domains/tools/browser-act-command.js');
@@ -19,6 +21,24 @@ assert.equal(
   isBrowserActCoreGuideCommand(['browser', 'open', 'my-browser', 'https://example.com']),
   false,
   'browser commands are not guide-loading commands',
+);
+
+assert.equal(
+  classifyBrowserActCommandRisk(['--session', 'merchant-demo', 'screenshot']),
+  'read_only',
+  'screenshot commands should remain read-only',
+);
+
+assert.equal(
+  classifyBrowserActCommandRisk(['--session', 'merchant-demo', 'click', 'button:保存']),
+  'write',
+  'clicking a save button should be classified as a write command',
+);
+
+assert.equal(
+  requiresBrowserActConfirmation(['--session', 'merchant-demo', 'click', 'button:保存']),
+  true,
+  'write commands must require confirmation',
 );
 
 assert.doesNotThrow(() => {

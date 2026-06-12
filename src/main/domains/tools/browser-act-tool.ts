@@ -10,9 +10,11 @@ import { expandHomePath } from '../../infrastructure/utils/path-security';
 import { SystemConfigStore } from '../../infrastructure/database/system-config-store';
 import {
   isBrowserActCoreGuideCommand,
+  requiresBrowserActConfirmation,
   truncateOutput,
   validateBrowserActArgs,
 } from './browser-act-command';
+import { globalFeishuConfirmationStore } from '../connectors/feishu/confirmation-card';
 
 const DEFAULT_TIMEOUT_SECONDS = 120;
 const MAX_TIMEOUT_SECONDS = 900;
@@ -31,6 +33,9 @@ const BrowserActToolSchema = Type.Object({
     minimum: 1,
     maximum: MAX_TIMEOUT_SECONDS,
     description: `Command timeout in seconds. Default ${DEFAULT_TIMEOUT_SECONDS}, max ${MAX_TIMEOUT_SECONDS}.`,
+  })),
+  confirmationPlanId: Type.Optional(Type.String({
+    description: '飞书确认卡片返回的确认编号。保存、提交、发布、删除、改价、改电话等写入动作必须传入已确认的 planId。',
   })),
 });
 
@@ -315,6 +320,51 @@ function formatBrowserActResult(
   return lines.join('\n');
 }
 
+function validateBrowserActConfirmation(args: string[], confirmationPlanId?: string) {
+  const confirmationRequired = requiresBrowserActConfirmation(args);
+  if (!confirmationRequired) {
+    return {
+      confirmationRequired: false,
+      confirmationStatus: undefined,
+    };
+  }
+
+  if (!confirmationPlanId) {
+    return {
+      confirmationRequired: true,
+      confirmationStatus: undefined,
+      error: '该 BrowserAct 命令看起来会产生线上写入或副作用。请先调用 feishu_confirmation 发送飞书确认卡片，并在用户确认后把 confirmationPlanId 传给 browser_act 再执行。',
+    };
+  }
+
+  const plan = globalFeishuConfirmationStore.get(confirmationPlanId);
+  if (!plan) {
+    return {
+      confirmationRequired: true,
+      confirmationStatus: undefined,
+      error: `未找到飞书确认计划：${confirmationPlanId}。请重新发送 feishu_confirmation 确认卡片。`,
+    };
+  }
+
+  if (plan.status !== 'approved') {
+    const statusText = plan.status === 'pending'
+      ? '尚未确认，仍在等待确认'
+      : plan.status === 'rejected'
+        ? '已取消/拒绝'
+        : plan.status;
+    return {
+      confirmationRequired: true,
+      confirmationStatus: plan.status,
+      error: `飞书确认计划 ${confirmationPlanId} ${statusText}，不能执行该 BrowserAct 写入动作。`,
+    };
+  }
+
+  return {
+    confirmationRequired: true,
+    confirmationStatus: plan.status,
+  };
+}
+
 export const browserActToolPlugin: ToolPlugin = {
   metadata: {
     id: 'browser-act',
@@ -340,7 +390,7 @@ export const browserActToolPlugin: ToolPlugin = {
 1. 每个 DeepBot 会话第一次调用必须是 args: ["get-skills", "core", "--skill-version", "2.0.2"]。
 2. args 只传 BrowserAct 参数，不要包含 browser-act 二进制名称。
 3. 生产任务只允许一个执行器控制一个账号浏览器；不要和内置 browser 工具混用同一个账号会话。
-4. 涉及保存、提交、发布、删除、上下架、改价、改电话、应用模板等副作用动作前，必须先向用户展示当前页面截图和计划动作并等待确认。
+4. 涉及保存、提交、发布、删除、上下架、改价、改电话、应用模板等副作用动作前，必须先调用 feishu_confirmation 发送确认卡片；用户确认后，把 confirmationPlanId 传给本工具。
 5. 工具会阻断 browser delete、proxy buy-request、auth clear、cookies clear 等基础设施破坏命令。
 
 配置：可用 BROWSER_ACT_BIN 指定 BrowserAct 二进制路径；未配置时优先尝试 ~/.local/bin/browser-act，最后使用 PATH 中的 browser-act。`,
@@ -364,6 +414,25 @@ export const browserActToolPlugin: ToolPlugin = {
               details: {
                 success: false,
                 guideRequired: true,
+              },
+              isError: true,
+            };
+          }
+
+          const confirmation = validateBrowserActConfirmation(args, params?.confirmationPlanId);
+          if (confirmation.error) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: confirmation.error,
+                },
+              ],
+              details: {
+                success: false,
+                command: args,
+                confirmationRequired: confirmation.confirmationRequired,
+                confirmationStatus: confirmation.confirmationStatus,
               },
               isError: true,
             };
@@ -396,6 +465,9 @@ export const browserActToolPlugin: ToolPlugin = {
               timedOut: result.timedOut,
               aborted: result.aborted,
               error: result.error,
+              confirmationRequired: confirmation.confirmationRequired,
+              confirmationStatus: confirmation.confirmationStatus,
+              confirmationPlanId: params?.confirmationPlanId,
               browserActArtifacts: artifactImport.paths,
               browserActArtifactWarnings: artifactImport.warnings,
             },

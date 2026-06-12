@@ -5,6 +5,8 @@ export class BrowserActCommandBlocked extends Error {
   }
 }
 
+export type BrowserActCommandRisk = 'read_only' | 'write';
+
 const BLOCKED_INFRASTRUCTURE_COMMANDS: Array<[string, string]> = [
   ['browser', 'delete'],
   ['proxy', 'buy-request'],
@@ -12,8 +14,88 @@ const BLOCKED_INFRASTRUCTURE_COMMANDS: Array<[string, string]> = [
   ['cookies', 'clear'],
 ];
 
+const DIRECT_WRITE_COMMANDS = new Set([
+  'upload',
+  'submit',
+]);
+
+const WRITE_ACTION_COMMANDS = new Set([
+  'click',
+  'fill',
+  'type',
+  'select',
+  'press',
+  'drag',
+]);
+
+const WRITE_KEYWORDS = [
+  'save',
+  'submit',
+  'publish',
+  'delete',
+  'remove',
+  'update',
+  'modify',
+  'confirm',
+  'apply',
+  'enable',
+  'disable',
+  '保存',
+  '提交',
+  '发布',
+  '删除',
+  '移除',
+  '更新',
+  '修改',
+  '确认',
+  '应用',
+  '启用',
+  '停用',
+  '上架',
+  '下架',
+  '改价',
+  '调价',
+  '价格',
+  '改电话',
+  '电话',
+  '营业时间',
+  '活动',
+  '模板',
+];
+
 export function isBrowserActCoreGuideCommand(args: string[]): boolean {
   return args[0] === 'get-skills' && args[1] === 'core';
+}
+
+function normalizedTokens(args: string[]): string[] {
+  return args.map((arg) => arg.trim().toLowerCase()).filter(Boolean);
+}
+
+export function classifyBrowserActCommandRisk(args: string[]): BrowserActCommandRisk {
+  if (!Array.isArray(args) || isBrowserActCoreGuideCommand(args)) {
+    return 'read_only';
+  }
+
+  const tokens = normalizedTokens(args);
+  if (tokens.some((token) => DIRECT_WRITE_COMMANDS.has(token))) {
+    return 'write';
+  }
+
+  const joined = tokens.join(' ');
+  const hasWriteKeyword = WRITE_KEYWORDS.some((keyword) => joined.includes(keyword.toLowerCase()));
+  if (!hasWriteKeyword) {
+    return 'read_only';
+  }
+
+  if (tokens.some((token) => WRITE_ACTION_COMMANDS.has(token))) {
+    return 'write';
+  }
+
+  return 'read_only';
+}
+
+export function requiresBrowserActConfirmation(args: string[]): boolean {
+  return classifyBrowserActCommandRisk(args) === 'write';
 }
 
 export function validateBrowserActArgs(args: string[]): void {
