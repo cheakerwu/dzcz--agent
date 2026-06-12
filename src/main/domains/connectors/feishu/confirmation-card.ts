@@ -63,6 +63,8 @@ const RISK_META: Record<FeishuConfirmationRiskLevel, { label: string; template: 
 };
 
 let planSeq = 0;
+let defaultAuditStore: (FeishuConfirmationAuditSink & { ensureSchema: () => void }) | null | undefined;
+let defaultAuditStoreWarningShown = false;
 
 export function createConfirmationPlanId(prefix = 'confirm'): string {
   planSeq += 1;
@@ -236,8 +238,39 @@ export interface FeishuConfirmationStore {
   list(): FeishuConfirmationPlan[];
 }
 
-export function createFeishuConfirmationStore(): FeishuConfirmationStore {
+export interface FeishuConfirmationAuditSink {
+  create(input: FeishuConfirmationPlanInput, status?: FeishuConfirmationStatus): FeishuConfirmationPlan;
+  approve(plan: FeishuConfirmationPlan, input: FeishuConfirmationDecisionInput): FeishuConfirmationPlan;
+  reject(plan: FeishuConfirmationPlan, input: FeishuConfirmationDecisionInput): FeishuConfirmationPlan;
+}
+
+function getDefaultFeishuConfirmationAuditStore(): FeishuConfirmationAuditSink | undefined {
+  if (defaultAuditStore !== undefined) {
+    return defaultAuditStore || undefined;
+  }
+
+  try {
+    const { SystemConfigStore } = require('../../../infrastructure/database/system-config-store');
+    const { FeishuConfirmationAuditStore } = require('./confirmation-audit-store');
+    const auditStore = new FeishuConfirmationAuditStore(SystemConfigStore.getInstance().getDb());
+    auditStore.ensureSchema();
+    defaultAuditStore = auditStore;
+  } catch (error) {
+    defaultAuditStore = null;
+    if (!defaultAuditStoreWarningShown) {
+      defaultAuditStoreWarningShown = true;
+      console.warn('[FeishuConfirmation] 审计存储初始化失败，将使用内存确认状态:', error);
+    }
+  }
+
+  return defaultAuditStore || undefined;
+}
+
+export function createFeishuConfirmationStore(options: {
+  auditStore?: FeishuConfirmationAuditSink;
+} = {}): FeishuConfirmationStore {
   const plans = new Map<string, FeishuConfirmationPlan>();
+  const auditStore = options.auditStore || getDefaultFeishuConfirmationAuditStore();
 
   function getExisting(planId: string): FeishuConfirmationPlan {
     const plan = plans.get(planId);
@@ -260,6 +293,7 @@ export function createFeishuConfirmationStore(): FeishuConfirmationStore {
         createdAt: now,
       };
       plans.set(plan.planId, plan);
+      auditStore?.create(input, plan.status);
       return plan;
     },
 
@@ -281,6 +315,7 @@ export function createFeishuConfirmationStore(): FeishuConfirmationStore {
         approvedAt: input.decidedAt || Date.now(),
       };
       plans.set(planId, updated);
+      auditStore?.approve(updated, input);
       return updated;
     },
 
@@ -298,6 +333,7 @@ export function createFeishuConfirmationStore(): FeishuConfirmationStore {
         rejectedAt: input.decidedAt || Date.now(),
       };
       plans.set(planId, updated);
+      auditStore?.reject(updated, input);
       return updated;
     },
 
