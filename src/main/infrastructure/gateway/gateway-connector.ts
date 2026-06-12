@@ -52,6 +52,23 @@ const PROGRESS_MESSAGES: Record<number, string> = {
   450000: '⏳ 已经跑了七分多钟，任务仍在进行，请继续等待～ 如需停止可发送 /stop，查看进度可发送 /status',
 };
 
+function formatPendingConfirmationStatus(conversationId?: string): string {
+  const pendingPlans = globalFeishuConfirmationStore
+    .list()
+    .filter((plan) => plan.status === 'pending')
+    .filter((plan) => !conversationId || plan.conversationId === conversationId)
+    .slice(0, 3);
+
+  if (pendingPlans.length === 0) {
+    return '';
+  }
+
+  const lines = pendingPlans.map((plan) => (
+    `- ${plan.title}（确认编号：${plan.planId}，风险：${plan.riskLevel}）`
+  ));
+  return `\n\n⏸️ 当前有 ${pendingPlans.length} 个待确认操作：\n${lines.join('\n')}\n请在飞书确认卡片中点击“确认执行”或“取消”。`;
+}
+
 /**
  * Connector Handler 类
  */
@@ -1007,6 +1024,8 @@ export class GatewayConnectorHandler {
             } else if (!streamingContent || !streamingContent.trim()) {
               statusText += '正在等待 AI 响应...';
             }
+
+            statusText += formatPendingConfirmationStatus(tab.conversationId);
             
             return statusText;
           }

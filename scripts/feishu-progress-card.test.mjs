@@ -13,6 +13,9 @@ const {
   handleCardCallback,
   setGatewayForCardCallback,
 } = require('../dist-electron/main/domains/tools/feishu-card-callback.js');
+const {
+  globalFeishuConfirmationStore,
+} = require('../dist-electron/main/domains/connectors/feishu/confirmation-card.js');
 
 test('buildFeishuTaskProgressCard renders a running task card with status and stop actions', () => {
   const card = buildFeishuTaskProgressCard({
@@ -211,6 +214,7 @@ test('GatewayConnectorHandler creates and completes a Feishu progress card for q
 });
 
 test('GatewayConnectorHandler keeps a Feishu progress card alive when /status is requested', async () => {
+  const pendingPlanId = `confirm_status_pending_${Date.now()}`;
   const tab = {
     id: 'tab_feishu_status',
     type: 'connector',
@@ -257,6 +261,16 @@ test('GatewayConnectorHandler keeps a Feishu progress card alive when /status is
     taskTitle: '检查门店',
   });
 
+  globalFeishuConfirmationStore.create({
+    planId: pendingPlanId,
+    title: '保存门店资料',
+    summary: '点击保存按钮',
+    riskLevel: 'high',
+    conversationId: 'oc_status',
+    requesterName: '小王',
+    details: { 门店: '趣东北', 平台: '美团' },
+  });
+
   await handler.handleConnectorMessage({
     tabId: '',
     messageId: 'om_status',
@@ -278,6 +292,9 @@ test('GatewayConnectorHandler keeps a Feishu progress card alive when /status is
 
   assert.equal(sentTexts.length, 1);
   assert.match(sentTexts[0].content, /任务正在执行中/);
+  assert.match(sentTexts[0].content, /待确认/);
+  assert.match(sentTexts[0].content, /保存门店资料/);
+  assert.match(sentTexts[0].content, new RegExp(pendingPlanId));
   assert.equal(updatedCards.length, 0);
   assert.equal(handler.progressCards.has(tab.id), true);
 });
