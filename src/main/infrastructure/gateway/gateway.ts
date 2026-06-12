@@ -853,6 +853,17 @@ export class Gateway {
   }
 
   /**
+   * 处理飞书操作确认卡片按钮动作
+   */
+  async handleFeishuConfirmationAction(
+    action: string,
+    planId?: string,
+    operator?: { operatorId: string; operatorName?: string }
+  ): Promise<string> {
+    return await this.connectorHandler.handleFeishuConfirmationAction(action, planId, operator);
+  }
+
+  /**
    * 人工直接回复连接器消息
    * 统一处理：发送到连接器 → 保存历史 → 通知前端显示
    */

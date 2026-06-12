@@ -83,6 +83,20 @@ export async function handleCardCallback(
         return { replyMessage };
       }
 
+      case 'feishu_confirmation_approve':
+      case 'feishu_confirmation_reject': {
+        if (!gatewayInstance) {
+          return { replyMessage: '系统还没有准备好处理确认卡片，请稍后再试。' };
+        }
+
+        const planId = callbackData.plan_id || callbackData.planId;
+        const replyMessage = await gatewayInstance.handleFeishuConfirmationAction(action, planId, {
+          operatorId,
+          operatorName,
+        });
+        return { replyMessage };
+      }
+
       case 'view_detail': {
         // 查看详细数据 - 触发 Agent 生成详细报告
         if (store_id && gatewayInstance) {

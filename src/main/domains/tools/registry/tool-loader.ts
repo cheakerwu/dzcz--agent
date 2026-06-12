@@ -41,6 +41,7 @@ import { commandToolPlugin } from '../command-tool';
 import { feishuDocToolPlugin } from '../feishu-doc-tool';
 import { feishuCardToolPlugin } from '../feishu-card-tool';
 import { feishuBitableToolPlugin } from '../feishu-bitable-tool';
+import { feishuConfirmationToolPlugin } from '../feishu-confirmation-tool';
 import { ocrToolPlugin } from '../ocr-tool';
 import { mcpAdapterToolPlugin } from '../mcp-adapter';
 import { skillLoaderPlugin } from '../skill-loader';
@@ -236,6 +237,9 @@ export class ToolLoader {
 
       // 飞书消息卡片工具
       tools.push(...await resolvePluginTools(feishuCardToolPlugin.create(pluginOpts)));
+
+      // 飞书操作确认工具
+      tools.push(...await resolvePluginTools(feishuConfirmationToolPlugin.create(pluginOpts)));
 
       // 飞书多维表格工具
       tools.push(...await resolvePluginTools(feishuBitableToolPlugin.create(pluginOpts)));

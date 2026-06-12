@@ -103,6 +103,7 @@ export const TOOL_NAMES = {
   FEISHU_SEND_CARD: 'feishu_send_card',
   FEISHU_UPDATE_CARD: 'feishu_update_card',
   FEISHU_BATCH_SEND_CARD: 'feishu_batch_send_card',
+  FEISHU_CONFIRMATION: 'feishu_confirmation',
 
   // 飞书多维表格工具
   FEISHU_BITABLE_LIST_RECORDS: 'feishu_bitable_list_records',

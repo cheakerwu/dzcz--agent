@@ -32,6 +32,7 @@ import {
   summarizeFeishuTaskProgress,
   type FeishuTaskProgressStatus,
 } from '../../domains/connectors/feishu/progress-card';
+import { globalFeishuConfirmationStore } from '../../domains/connectors/feishu/confirmation-card';
 
 const logger = createLogger('ConnectorHandler');
 
@@ -1036,6 +1037,40 @@ export class GatewayConnectorHandler {
     }
 
     return `未知进度卡片操作: ${action}`;
+  }
+
+  /**
+   * 处理飞书操作确认卡片按钮动作
+   */
+  async handleFeishuConfirmationAction(
+    action: string,
+    planId?: string,
+    operator?: { operatorId: string; operatorName?: string }
+  ): Promise<string> {
+    if (!planId) {
+      return '未找到确认编号，无法处理。';
+    }
+
+    const actor = {
+      operatorId: operator?.operatorId || 'unknown',
+      operatorName: operator?.operatorName,
+    };
+
+    try {
+      if (action === 'feishu_confirmation_approve') {
+        const plan = globalFeishuConfirmationStore.approve(planId, actor);
+        return `已确认执行：${plan.title}\n确认编号：${plan.planId}`;
+      }
+
+      if (action === 'feishu_confirmation_reject') {
+        const plan = globalFeishuConfirmationStore.reject(planId, actor);
+        return `已取消操作：${plan.title}\n确认编号：${plan.planId}`;
+      }
+
+      return `未知确认操作: ${action}`;
+    } catch (error) {
+      return `处理确认失败: ${getErrorMessage(error)}`;
+    }
   }
 
   /**
