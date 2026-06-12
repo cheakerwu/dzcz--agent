@@ -153,6 +153,74 @@ export function buildFeishuConfirmationCard(input: FeishuConfirmationPlanInput):
   };
 }
 
+function formatDecisionTime(timestamp?: number): string {
+  if (!timestamp) {
+    return '未记录';
+  }
+  return new Date(timestamp).toLocaleString('zh-CN');
+}
+
+export function buildFeishuConfirmationTerminalCard(input: FeishuConfirmationPlan): Record<string, any> {
+  const detailText = summarizeConfirmationDetails(input.details);
+  const requester = input.requesterName || input.requesterId || '未记录';
+  const approved = input.status === 'approved';
+  const rejected = input.status === 'rejected';
+  const title = approved ? '操作已确认' : rejected ? '操作已取消' : '确认已结束';
+  const template = approved ? 'green' : rejected ? 'grey' : 'orange';
+  const operator = approved
+    ? input.approvedByName || input.approvedById || '未记录'
+    : input.rejectedByName || input.rejectedById || '未记录';
+  const decidedAt = approved ? input.approvedAt : input.rejectedAt;
+
+  return {
+    config: { wide_screen_mode: true },
+    header: {
+      title: { tag: 'plain_text', content: title },
+      template,
+    },
+    elements: [
+      {
+        tag: 'div',
+        text: {
+          tag: 'lark_md',
+          content: `**原操作：** ${input.title}\n**确认编号：** ${input.planId}\n**发起人：** ${requester}`,
+        },
+      },
+      {
+        tag: 'div',
+        text: {
+          tag: 'lark_md',
+          content: `**处理人：** ${operator}\n**处理时间：** ${formatDecisionTime(decidedAt)}`,
+        },
+      },
+      { tag: 'hr' },
+      {
+        tag: 'div',
+        text: {
+          tag: 'lark_md',
+          content: `**操作摘要：**\n${input.summary}`,
+        },
+      },
+      {
+        tag: 'div',
+        text: {
+          tag: 'lark_md',
+          content: `**操作详情：**\n${detailText}`,
+        },
+      },
+      {
+        tag: 'note',
+        elements: [
+          {
+            tag: 'plain_text',
+            content: approved ? '该操作已获得确认，系统将继续执行。' : '该操作已被取消，不会继续执行。',
+          },
+        ],
+      },
+    ],
+  };
+}
+
 export interface FeishuConfirmationStore {
   create(input: FeishuConfirmationPlanInput): FeishuConfirmationPlan;
   get(planId: string): FeishuConfirmationPlan | undefined;

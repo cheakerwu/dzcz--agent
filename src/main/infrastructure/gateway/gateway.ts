@@ -864,6 +864,13 @@ export class Gateway {
   }
 
   /**
+   * 更新飞书交互卡片
+   */
+  async updateFeishuInteractiveCard(messageId: string, card: Record<string, any>): Promise<void> {
+    await this.connectorManager.updateInteractiveCard('feishu', messageId, card);
+  }
+
+  /**
    * 人工直接回复连接器消息
    * 统一处理：发送到连接器 → 保存历史 → 通知前端显示
    */

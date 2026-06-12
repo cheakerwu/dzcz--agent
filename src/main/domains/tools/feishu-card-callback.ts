@@ -13,6 +13,10 @@
 import type { Gateway } from '../../infrastructure/gateway/gateway';
 import { createLogger } from '../../../shared/utils/logger';
 import { getErrorMessage } from '../../../shared/utils/error-handler';
+import {
+  buildFeishuConfirmationTerminalCard,
+  globalFeishuConfirmationStore,
+} from '../connectors/feishu/confirmation-card';
 
 const logger = createLogger('FeishuCardCallback');
 
@@ -94,6 +98,13 @@ export async function handleCardCallback(
           operatorId,
           operatorName,
         });
+        const plan = planId ? globalFeishuConfirmationStore.get(planId) : undefined;
+        if (plan && (plan.status === 'approved' || plan.status === 'rejected' || plan.status === 'expired')) {
+          return {
+            replyMessage,
+            updateCard: buildFeishuConfirmationTerminalCard(plan),
+          };
+        }
         return { replyMessage };
       }
 
@@ -236,8 +247,14 @@ export function registerCardCallbackHandler(eventDispatcher: any): void {
 
         const result = await handleCardCallback(callbackData, callbackContext);
 
-        // 如果需要更新卡片，返回更新后的内容
+        // 如果需要更新卡片，主动 patch 原消息卡片，再返回 toast。
         if (result.updateCard) {
+          if (gatewayInstance && messageId) {
+            await gatewayInstance.updateFeishuInteractiveCard(messageId, result.updateCard);
+          } else {
+            logger.warn('卡片回调生成了更新内容，但缺少 Gateway 或 message_id，无法更新原卡片');
+          }
+
           return {
             code: 0,
             data: {

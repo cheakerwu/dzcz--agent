@@ -7,10 +7,12 @@ const {
   buildFeishuConfirmationCard,
   createConfirmationPlanId,
   createFeishuConfirmationStore,
+  globalFeishuConfirmationStore,
   summarizeConfirmationDetails,
 } = require('../dist-electron/main/domains/connectors/feishu/confirmation-card.js');
 const {
   handleCardCallback,
+  registerCardCallbackHandler,
   setGatewayForCardCallback,
 } = require('../dist-electron/main/domains/tools/feishu-card-callback.js');
 const {
@@ -167,4 +169,125 @@ test('card callback approves and rejects confirmation plans through Gateway', as
   assert.equal(rejected.replyMessage, '已处理 confirm_plan_2');
   assert.deepEqual(calls.map((call) => call.action), ['feishu_confirmation_approve', 'feishu_confirmation_reject']);
   assert.equal(calls[0].operator.operatorName, '店长');
+});
+
+test('card callback returns a terminal confirmation card after approve or reject', async () => {
+  const approvePlanId = `confirm_terminal_approve_${Date.now()}`;
+  const rejectPlanId = `confirm_terminal_reject_${Date.now()}`;
+
+  globalFeishuConfirmationStore.create({
+    planId: approvePlanId,
+    title: '价格调整确认',
+    summary: '将锅包肉套餐从 94 元调整为 89 元',
+    riskLevel: 'high',
+    requesterName: '小王',
+    details: { 门店: '趣东北', 平台: '美团' },
+  });
+  globalFeishuConfirmationStore.create({
+    planId: rejectPlanId,
+    title: '活动删除确认',
+    summary: '删除无效活动',
+    riskLevel: 'critical',
+    requesterName: '小王',
+    details: { 门店: '趣东北', 平台: '美团' },
+  });
+
+  setGatewayForCardCallback({
+    handleFeishuConfirmationAction: async (action, planId, operator) => {
+      if (action === 'feishu_confirmation_approve') {
+        globalFeishuConfirmationStore.approve(planId, operator);
+        return `已确认执行：${planId}`;
+      }
+      globalFeishuConfirmationStore.reject(planId, operator);
+      return `已取消操作：${planId}`;
+    },
+  });
+
+  const approved = await handleCardCallback(
+    { action: 'feishu_confirmation_approve', plan_id: approvePlanId },
+    {
+      operatorId: 'ou_admin',
+      operatorName: '店长',
+      messageId: 'om_approve_card',
+      chatId: 'oc_group',
+    },
+  );
+
+  const rejected = await handleCardCallback(
+    { action: 'feishu_confirmation_reject', plan_id: rejectPlanId },
+    {
+      operatorId: 'ou_admin',
+      operatorName: '店长',
+      messageId: 'om_reject_card',
+      chatId: 'oc_group',
+    },
+  );
+
+  assert.ok(approved.updateCard);
+  assert.ok(rejected.updateCard);
+
+  const approvedCard = JSON.stringify(approved.updateCard);
+  assert.match(approvedCard, /操作已确认/);
+  assert.match(approvedCard, /店长/);
+  assert.doesNotMatch(approvedCard, /feishu_confirmation_approve/);
+  assert.doesNotMatch(approvedCard, /feishu_confirmation_reject/);
+
+  const rejectedCard = JSON.stringify(rejected.updateCard);
+  assert.match(rejectedCard, /操作已取消/);
+  assert.match(rejectedCard, /店长/);
+  assert.doesNotMatch(rejectedCard, /feishu_confirmation_approve/);
+  assert.doesNotMatch(rejectedCard, /feishu_confirmation_reject/);
+});
+
+test('registered card callback updates the original Feishu card when confirmation reaches a terminal state', async () => {
+  const planId = `confirm_registered_update_${Date.now()}`;
+  const updatedCards = [];
+  const handlers = {};
+
+  globalFeishuConfirmationStore.create({
+    planId,
+    title: '价格调整确认',
+    summary: '将锅包肉套餐从 94 元调整为 89 元',
+    riskLevel: 'high',
+    requesterName: '小王',
+    details: { 门店: '趣东北', 平台: '美团' },
+  });
+
+  setGatewayForCardCallback({
+    handleFeishuConfirmationAction: async (_action, incomingPlanId, operator) => {
+      globalFeishuConfirmationStore.approve(incomingPlanId, operator);
+      return `已确认执行：${incomingPlanId}`;
+    },
+    updateFeishuInteractiveCard: async (messageId, card) => {
+      updatedCards.push({ messageId, card });
+    },
+  });
+
+  registerCardCallbackHandler({
+    register(map) {
+      Object.assign(handlers, map);
+    },
+  });
+
+  const response = await handlers['card.action.trigger']({
+    action: {
+      value: {
+        action: 'feishu_confirmation_approve',
+        plan_id: planId,
+      },
+    },
+    operator: {
+      open_id: 'ou_admin',
+      name: '店长',
+    },
+    context: {
+      message_id: 'om_confirmation_card',
+      chat_id: 'oc_group',
+    },
+  });
+
+  assert.equal(response.code, 0);
+  assert.equal(updatedCards.length, 1);
+  assert.equal(updatedCards[0].messageId, 'om_confirmation_card');
+  assert.match(JSON.stringify(updatedCards[0].card), /操作已确认/);
 });
