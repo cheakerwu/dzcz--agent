@@ -48,6 +48,20 @@ async function sendInteractiveCardWithGateway(input: {
   );
 }
 
+async function markProgressWaitingConfirmationWithGateway(tabId: string, input: {
+  conversationId?: string;
+  title: string;
+  summary: string;
+  planId: string;
+  riskLevel: string;
+}): Promise<void> {
+  const gateway = getGatewayInstance();
+  if (!gateway?.markFeishuProgressWaitingConfirmation) {
+    return;
+  }
+  await gateway.markFeishuProgressWaitingConfirmation(tabId, input);
+}
+
 export const feishuConfirmationToolPlugin: ToolPlugin = {
   metadata: {
     id: 'feishu-confirmation',
@@ -68,6 +82,8 @@ export const feishuConfirmationToolPlugin: ToolPlugin = {
       options.dependencies?.confirmationStore || globalFeishuConfirmationStore;
     const sendInteractiveCard =
       options.dependencies?.sendInteractiveCard || sendInteractiveCardWithGateway;
+    const markFeishuProgressWaitingConfirmation =
+      options.dependencies?.markFeishuProgressWaitingConfirmation || markProgressWaitingConfirmationWithGateway;
 
     const tool: AgentTool = {
       name: TOOL_NAMES.FEISHU_CONFIRMATION,
@@ -152,6 +168,19 @@ export const feishuConfirmationToolPlugin: ToolPlugin = {
             executionBinding: args.execution_binding,
           });
 
+          let progressCardUpdateWarning: string | undefined;
+          try {
+            await markFeishuProgressWaitingConfirmation(options.sessionId, {
+              conversationId: args.receive_id,
+              planId: plan.planId,
+              title: plan.title,
+              summary: plan.summary,
+              riskLevel,
+            });
+          } catch (error) {
+            progressCardUpdateWarning = getErrorMessage(error);
+          }
+
           return {
             content: [{
               type: 'text' as const,
@@ -164,6 +193,7 @@ export const feishuConfirmationToolPlugin: ToolPlugin = {
               messageId: sent?.messageId,
               riskLevel,
               executionBinding: plan.executionBinding,
+              progressCardUpdateWarning,
             },
           };
         } catch (error) {

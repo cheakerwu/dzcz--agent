@@ -1059,6 +1059,39 @@ export class GatewayConnectorHandler {
   }
 
   /**
+   * 将飞书进度卡片更新为等待人工确认状态。
+   */
+  async markFeishuProgressWaitingConfirmation(tabId: string, input: {
+    title: string;
+    summary: string;
+    planId: string;
+    riskLevel: string;
+  }): Promise<void> {
+    const cardState = this.progressCards.get(tabId);
+    if (!cardState || !this.tabManager || !this.connectorManager) {
+      return;
+    }
+
+    const tab = this.tabManager.getTab(tabId);
+    if (!tab?.connectorId) {
+      return;
+    }
+
+    const card = buildFeishuTaskProgressCard({
+      taskTitle: cardState.taskTitle,
+      status: 'waiting_confirmation',
+      statusText: `等待确认：${input.title}`,
+      elapsedMs: Date.now() - cardState.startedAt,
+      completedStepCount: 0,
+      runningStepNames: [],
+      recentStepNames: [`确认编号：${input.planId}`, `风险等级：${input.riskLevel}`],
+      tabId,
+    });
+
+    await this.connectorManager.updateInteractiveCard(tab.connectorId, cardState.messageId, card);
+  }
+
+  /**
    * 处理飞书操作确认卡片按钮动作
    */
   async handleFeishuConfirmationAction(

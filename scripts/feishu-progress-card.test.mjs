@@ -299,6 +299,65 @@ test('GatewayConnectorHandler keeps a Feishu progress card alive when /status is
   assert.equal(handler.progressCards.has(tab.id), true);
 });
 
+test('GatewayConnectorHandler marks a Feishu progress card as waiting for confirmation', async () => {
+  const tab = {
+    id: 'tab_feishu_waiting_confirmation',
+    type: 'connector',
+    connectorId: 'feishu',
+    conversationId: 'oc_waiting_confirmation',
+    pendingMessages: [],
+    processingMessageId: 'om_running',
+  };
+  const updatedCards = [];
+  const handler = new GatewayConnectorHandler();
+
+  handler.setDependencies({
+    mainWindow: { isDestroyed: () => false, webContents: { send: () => {} } },
+    connectorManager: {
+      updateInteractiveCard: async (connectorId, messageId, card) => {
+        updatedCards.push({ connectorId, messageId, card });
+      },
+      getConnector: () => null,
+    },
+    tabManager: {
+      getTab: (tabId) => (tabId === tab.id ? tab : undefined),
+    },
+    sessionManager: null,
+    handleSendMessage: async () => {},
+    getOrCreateRuntime: () => ({
+      isCurrentlyGenerating: () => true,
+      getExecutionSteps: () => [],
+      getCurrentStreamingContent: () => '',
+    }),
+    sendAIResponse: async () => {},
+    sendError: () => {},
+    resetSessionRuntime: async () => null,
+    executeSystemCommand: async () => '',
+  });
+
+  handler.progressCards.set(tab.id, {
+    messageId: 'om_progress_card',
+    startedAt: Date.now(),
+    taskTitle: '保存门店资料',
+  });
+
+  await handler.markFeishuProgressWaitingConfirmation(tab.id, {
+    title: '价格调整确认',
+    summary: '将锅包肉套餐从 94 元调整为 89 元',
+    planId: 'confirm_waiting_progress',
+    riskLevel: 'high',
+  });
+
+  assert.equal(updatedCards.length, 1);
+  assert.equal(updatedCards[0].connectorId, 'feishu');
+  assert.equal(updatedCards[0].messageId, 'om_progress_card');
+  const body = JSON.stringify(updatedCards[0].card);
+  assert.match(updatedCards[0].card.header.title.content, /等待确认/);
+  assert.match(body, /价格调整确认/);
+  assert.match(body, /confirm_waiting_progress/);
+  assert.match(body, /high/);
+});
+
 test('card callback routes Feishu progress actions to Gateway', async () => {
   const calls = [];
   setGatewayForCardCallback({

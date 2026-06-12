@@ -158,6 +158,7 @@ test('summarizeConfirmationDetails formats object details for cards and tool res
 
 test('feishu confirmation tool sends a card and records pending confirmation', async () => {
   const calls = [];
+  const waitingUpdates = [];
   const store = createFeishuConfirmationStore();
   const tool = feishuConfirmationToolPlugin.create({
     workspaceDir: process.cwd(),
@@ -167,6 +168,9 @@ test('feishu confirmation tool sends a card and records pending confirmation', a
       sendInteractiveCard: async (input) => {
         calls.push(input);
         return { messageId: 'om_confirmation_card' };
+      },
+      markFeishuProgressWaitingConfirmation: async (tabId, input) => {
+        waitingUpdates.push({ tabId, input });
       },
     },
   });
@@ -201,6 +205,16 @@ test('feishu confirmation tool sends a card and records pending confirmation', a
     summary: 'browser_act click button:保存',
   });
   assert.deepEqual(result.details.executionBinding, plan.executionBinding);
+  assert.deepEqual(waitingUpdates, [{
+    tabId: 'tab_confirm',
+    input: {
+      conversationId: 'oc_group',
+      planId: plan.planId,
+      title: '价格调整确认',
+      summary: '将锅包肉套餐从 94 元调整为 89 元',
+      riskLevel: 'high',
+    },
+  }]);
 });
 
 test('card callback approves and rejects confirmation plans through Gateway', async () => {

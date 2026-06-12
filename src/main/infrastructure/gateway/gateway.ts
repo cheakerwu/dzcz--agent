@@ -853,6 +853,16 @@ export class Gateway {
   }
 
   /**
+   * 将飞书进度卡片标记为等待确认
+   */
+  async markFeishuProgressWaitingConfirmation(
+    tabId: string,
+    input: { title: string; summary: string; planId: string; riskLevel: string }
+  ): Promise<void> {
+    await this.connectorHandler.markFeishuProgressWaitingConfirmation(tabId, input);
+  }
+
+  /**
    * 处理飞书操作确认卡片按钮动作
    */
   async handleFeishuConfirmationAction(
